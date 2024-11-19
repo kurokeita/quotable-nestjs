@@ -1,10 +1,16 @@
 {
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always",
+    },
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "prettier.semi": false,
     "prettier.endOfLine": "lf",
     "prettier.trailingComma": "all",
     "prettier.singleQuote": true,
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit"
+    "jest.runMode": "on-demand",
+    "files.eol": "\n",
+    "[dotenv]": {
+        "editor.defaultFormatter": "foxundermoon.shell-format"
     }
 }
