@@ -9,6 +9,7 @@ import {
   Sequelize,
   Table,
 } from 'sequelize-typescript'
+import slugify from 'slugify'
 import { Quote } from '../quote/quote.entity'
 
 @Scopes(() => ({
@@ -25,6 +26,7 @@ import { Quote } from '../quote/quote.entity'
         [Sequelize.fn('COUNT', Sequelize.col('quotes.id')), 'quotesCount'],
       ],
     },
+    having: Sequelize.literal('Author.id IS NOT NULL'), // Make sure that we don't get this kind of Author instance `{id: null, name: null, ..., quotesCount: 0}`
   },
 }))
 @Table({ tableName: 'authors' })
@@ -80,4 +82,6 @@ export class Author extends Model {
     type: DataType.VIRTUAL(DataType.INTEGER),
   })
   quotesCount: number
+
+  static getSlug = (name: string) => slugify(name, { lower: true })
 }

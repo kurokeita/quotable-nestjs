@@ -12,4 +12,10 @@ export class AuthorRepository {
   async getById(id: number): Promise<Author | null> {
     return await this.authorModel.scope('withQuotesCount').findByPk(id)
   }
+
+  async getBySlug(slug: string): Promise<Author | null> {
+    return await this.authorModel.scope('withQuotesCount').findOne({
+      where: { slug: Author.getSlug(slug) },
+    })
+  }
 }
