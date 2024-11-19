@@ -15,11 +15,6 @@ module.exports = {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      slug: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
       createdAt: {
         allowNull: false,
         type: DataTypes.DATE(6),

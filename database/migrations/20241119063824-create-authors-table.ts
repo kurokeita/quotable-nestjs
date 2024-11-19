@@ -13,10 +13,12 @@ module.exports = {
       },
       name: {
         type: DataTypes.STRING,
+        allowNull: false,
       },
       slug: {
         type: DataTypes.STRING,
         unique: true,
+        allowNull: false,
       },
       description: {
         type: DataTypes.STRING,

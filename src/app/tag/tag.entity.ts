@@ -9,7 +9,7 @@ import {
 import { Quote } from '../quote/quote.entity'
 import { QuoteTag } from './quote_tag.entity'
 
-@Table({ tableName: 'tags' })
+@Table({ tableName: 'tags', paranoid: true })
 export class Tag extends Model<Tag> {
   @Column({
     type: DataType.BIGINT.UNSIGNED,
