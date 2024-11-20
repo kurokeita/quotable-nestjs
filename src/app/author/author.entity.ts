@@ -27,9 +27,10 @@ import { Quote } from '../quote/quote.entity'
       ],
     },
     having: Sequelize.literal('Author.id IS NOT NULL'), // Make sure that we don't get this kind of Author instance `{id: null, name: null, ..., quotesCount: 0}`
+    group: ['Author.id'],
   },
 }))
-@Table({ tableName: 'authors' })
+@Table({ tableName: 'authors', paranoid: true })
 export class Author extends Model {
   @Column({
     type: DataType.BIGINT.UNSIGNED,
@@ -49,13 +50,13 @@ export class Author extends Model {
   slug: string
 
   @Column(DataType.STRING)
-  description: string
+  description?: string
 
   @Column(DataType.STRING)
-  bio: string
+  bio?: string
 
   @Column(DataType.STRING)
-  link: string
+  link?: string
 
   @Column({
     type: DataType.DATE(6),

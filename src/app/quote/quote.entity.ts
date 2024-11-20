@@ -29,7 +29,7 @@ import { Tag } from '../tag/tag.entity'
     order: Sequelize.literal('rand()'),
   },
 }))
-@Table({ tableName: 'quotes' })
+@Table({ tableName: 'quotes', paranoid: true })
 export class Quote extends Model<Quote> {
   @Column({
     type: DataType.BIGINT.UNSIGNED,
