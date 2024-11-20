@@ -18,5 +18,10 @@ export default registerAs(
       models: [Author, Quote, Tag, QuoteTag],
       autoLoadModels: true,
       synchronize: false,
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      define: {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_unicode_ci',
+      },
     }) as SequelizeModuleAsyncOptions,
 )

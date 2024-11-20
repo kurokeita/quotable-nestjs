@@ -8,9 +8,9 @@ import { Author } from './author.entity'
 
 export enum AuthorSortByEnum {
   NAME = 'name',
-  QUOTES_COUNT = 'quotes_count',
-  DATE_CREATED = 'dateCreated',
-  DATE_MODIFIED = 'dateModified',
+  QUOTES_COUNT = 'quotesCount',
+  DATE_CREATED = 'createdAt',
+  DATE_MODIFIED = 'updatedAt',
 }
 
 @Injectable()

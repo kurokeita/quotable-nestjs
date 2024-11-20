@@ -9,9 +9,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
 import { AuthorService } from './author.service'
 
+@ApiTags('Authors')
 @Controller('api/authors')
 export class AuthorController {
   constructor(private readonly authorService: AuthorService) {}
