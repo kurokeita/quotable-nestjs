@@ -9,5 +9,6 @@ import { QuoteService } from './quote.service'
   imports: [AuthorModule, TagModule],
   controllers: [QuoteController],
   providers: [QuoteRepository, QuoteService],
+  exports: [AuthorModule, TagModule, QuoteRepository, QuoteService],
 })
 export class QuoteModule {}

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiSchema, OmitType } from '@nestjs/swagger'
 import { Transform, Type } from 'class-transformer'
 import {
+  IsDefined,
   IsEnum,
   IsIn,
   IsInt,
@@ -53,6 +54,7 @@ export class IndexAuthorsDto {
 export class CreateAuthorDto {
   @ApiProperty()
   @IsString()
+  @IsDefined()
   name: string
 
   @ApiProperty()
