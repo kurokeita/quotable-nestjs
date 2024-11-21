@@ -1,9 +1,17 @@
 import { ApiProperty, ApiSchema, OmitType } from '@nestjs/swagger'
 import { Transform, Type } from 'class-transformer'
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator'
+import {
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+} from 'class-validator'
 import * as _ from 'lodash'
-import { OrderEnum } from 'src/enums/order.enum'
-import { PagingLimitEnum } from 'src/enums/paging_limit.enum'
+import { OrderEnum } from '../../enums/order.enum'
+import { PagingLimitEnum } from '../../enums/paging_limit.enum'
 import { AuthorSortByEnum } from './author.repository'
 
 export class IndexAuthorsDto {
@@ -59,6 +67,7 @@ export class CreateAuthorDto {
 
   @ApiProperty()
   @IsString()
+  @IsUrl()
   @IsOptional()
   link: string
 }

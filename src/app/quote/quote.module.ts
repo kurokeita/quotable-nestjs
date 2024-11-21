@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common'
-import { GetRandomQuoteService } from './get_random_quote.service'
+import { AuthorModule } from '../author/author.module'
+import { TagModule } from '../tag/tag.module'
 import { QuoteController } from './quote.controller'
 import { QuoteRepository } from './quote.repository'
+import { QuoteService } from './quote.service'
 
 @Module({
-  imports: [],
+  imports: [AuthorModule, TagModule],
   controllers: [QuoteController],
-  providers: [QuoteRepository, GetRandomQuoteService],
+  providers: [QuoteRepository, QuoteService],
 })
 export class QuoteModule {}

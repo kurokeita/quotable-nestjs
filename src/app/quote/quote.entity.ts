@@ -17,7 +17,9 @@ import { Tag } from '../tag/tag.entity'
 
 @DefaultScope(() => ({
   include: [
-    Author,
+    {
+      model: Author,
+    },
     {
       model: Tag,
       through: { attributes: [] },
@@ -30,7 +32,7 @@ import { Tag } from '../tag/tag.entity'
   },
 }))
 @Table({ tableName: 'quotes', paranoid: true })
-export class Quote extends Model<Quote> {
+export class Quote extends Model<Partial<Quote>> {
   @Column({
     type: DataType.BIGINT.UNSIGNED,
     primaryKey: true,
@@ -38,7 +40,9 @@ export class Quote extends Model<Quote> {
   })
   id: number
 
-  @Column({ type: DataType.STRING })
+  @Column({
+    type: DataType.TEXT,
+  })
   content: string
 
   @ForeignKey(() => Author)
@@ -68,4 +72,12 @@ export class Quote extends Model<Quote> {
 
   @BelongsToMany(() => Tag, () => QuoteTag)
   tags: Array<Tag & { QuoteTag: QuoteTag }>
+
+  toJSON(): { [key: string]: any } {
+    const values = { ...this.get() }
+
+    delete values.deletedAt
+
+    return values
+  }
 }

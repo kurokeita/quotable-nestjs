@@ -1,9 +1,9 @@
 import { registerAs } from '@nestjs/config'
 import { SequelizeModuleAsyncOptions } from '@nestjs/sequelize'
-import { Author } from 'src/app/author/author.entity'
-import { Quote } from 'src/app/quote/quote.entity'
-import { QuoteTag } from 'src/app/tag/quote_tag.entity'
-import { Tag } from 'src/app/tag/tag.entity'
+import { Author } from '../app/author/author.entity'
+import { Quote } from '../app/quote/quote.entity'
+import { QuoteTag } from '../app/tag/quote_tag.entity'
+import { Tag } from '../app/tag/tag.entity'
 
 export default registerAs(
   'database',

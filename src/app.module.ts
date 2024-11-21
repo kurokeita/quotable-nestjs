@@ -5,6 +5,7 @@ import { AuthorModule } from './app/author/author.module'
 import { DatabaseModule } from './app/database/database.module'
 import { HealthModule } from './app/health/health.module'
 import { QuoteModule } from './app/quote/quote.module'
+import { TagModule } from './app/tag/tag.module'
 import appConfig from './config/app.config'
 import databaseConfig from './config/database.config'
 
@@ -19,6 +20,7 @@ import databaseConfig from './config/database.config'
     HealthModule,
     AuthorModule,
     QuoteModule,
+    TagModule,
   ],
   controllers: [],
   providers: [],
