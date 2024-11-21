@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common'
+import Transaction from 'sequelize/types/transaction'
+import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
 import { AuthorRepository } from './author.repository'
 
@@ -28,5 +30,19 @@ export class AuthorService {
 
   async index(input: IndexAuthorsDto) {
     return await this.authorRepository.index(input)
+  }
+
+  async bulkCreate(
+    input: CreateAuthorDto[],
+    options: { transaction: Transaction },
+  ): Promise<BulkCreateResult<CreateAuthorDto>> {
+    // TODO: implement the bulk create logic here
+
+    return {
+      input: 0,
+      created: 0,
+      skipped: 0,
+      skippedData: [],
+    }
   }
 }

@@ -1,19 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { plainToInstance } from 'class-transformer'
 import { Sequelize } from 'sequelize-typescript'
+import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
 import { CreateAuthorDto } from '../author/author.dto'
 import { AuthorService } from '../author/author.service'
 import { CreateQuoteDto } from '../quote/quote.dto'
 import { QuoteService } from '../quote/quote.service'
 import { TagService } from '../tag/tag.service'
 import { UploadContentDto } from './upload.dto'
-
-export interface BulkCreateResult {
-  input: number
-  created: number
-  skipped: number
-  skippedData: Array<CreateAuthorDto | CreateQuoteDto>
-}
 
 @Injectable()
 export class UploadService {
@@ -24,11 +18,14 @@ export class UploadService {
     private readonly tagService: TagService,
   ) {}
 
-  async upload(
-    file: Express.Multer.File,
-  ): Promise<{ authors: BulkCreateResult; quotes: BulkCreateResult }> {
+  async upload(file: Express.Multer.File): Promise<{
+    authors: BulkCreateResult<CreateAuthorDto>
+    quotes: BulkCreateResult<CreateQuoteDto>
+  }> {
     const content = JSON.parse(file.buffer.toString())
     const uploadContentDto = plainToInstance(UploadContentDto, content)
+
+    // TODO: counting of original data must start here before the filter
     const authors = uploadContentDto.authors?.filter((i) => i.name) ?? []
     const quotes =
       uploadContentDto.quotes?.filter(
@@ -45,6 +42,7 @@ export class UploadService {
     const t = await this.sequelize.transaction()
 
     try {
+      // TODO: implementing bulk create for authors and quotes, also bulk syncing tags
       await t.commit()
 
       return {

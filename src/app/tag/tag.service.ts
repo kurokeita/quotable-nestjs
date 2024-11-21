@@ -37,4 +37,11 @@ export class TagService {
 
     return quote
   }
+
+  async bulkSync(
+    quoteTags: Map<number, string[]>,
+    options: { transaction: Transaction },
+  ): Promise<void> {
+    // TODO: implement the bulk sync logic here
+  }
 }

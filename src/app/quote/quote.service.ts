@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { Sequelize } from 'sequelize-typescript'
+import Transaction from 'sequelize/types/transaction'
 import PaginatedResponse from 'src/interfaces/paginated_response.interface'
+import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
 import { TagService } from '../tag/tag.service'
 import {
   CreateQuoteDto,
@@ -101,6 +103,20 @@ export class QuoteService {
       await t.rollback()
 
       throw e
+    }
+  }
+
+  async bulkCreate(
+    input: CreateQuoteDto[],
+    options: { transaction: Transaction },
+  ): Promise<BulkCreateResult<CreateQuoteDto>> {
+    // TODO: implement the bulk create logic here
+
+    return {
+      input: 0,
+      created: 0,
+      skipped: 0,
+      skippedData: [],
     }
   }
 }
