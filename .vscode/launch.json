@@ -1,0 +1,28 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Attach",
+            "request": "attach",
+            "type": "node",
+            "port": 9229
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Run and debug",
+            "args": [
+                "${workspaceFolder}/src/main.ts"
+            ],
+            "runtimeArgs": [
+                "--nolazy",
+                "-r",
+                "ts-node/register",
+                "-r",
+                "tsconfig-paths/register"
+            ],
+            "sourceMaps": true,
+            "cwd": "${workspaceRoot}",
+        },
+    ]
+}
