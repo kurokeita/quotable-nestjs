@@ -31,7 +31,7 @@ import { Quote } from '../quote/quote.entity'
   },
 }))
 @Table({ tableName: 'authors', paranoid: true })
-export class Author extends Model {
+export class Author extends Model<Partial<Author>> {
   @Column({
     type: DataType.BIGINT.UNSIGNED,
     primaryKey: true,
@@ -85,4 +85,10 @@ export class Author extends Model {
   quotesCount: number
 
   static getSlug = (name: string) => slugify(name, { lower: true })
+
+  toJSON(): { [key: string]: any } {
+    const values = { ...this.get() }
+    delete values.deletedAt
+    return values
+  }
 }

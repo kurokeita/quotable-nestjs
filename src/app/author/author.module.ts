@@ -7,5 +7,6 @@ import { AuthorService } from './author.service'
   imports: [],
   controllers: [AuthorController],
   providers: [AuthorRepository, AuthorService],
+  exports: [AuthorRepository, AuthorService],
 })
 export class AuthorModule {}

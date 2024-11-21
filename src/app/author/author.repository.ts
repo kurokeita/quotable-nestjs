@@ -1,8 +1,8 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/sequelize'
 import { Transaction } from 'sequelize'
-import { OrderEnum } from 'src/enums/order.enum'
-import PaginatedResponse from 'src/interfaces/paginated_response.interface'
+import { OrderEnum } from '../../enums/order.enum'
+import PaginatedResponse from '../../interfaces/paginated_response.interface'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
 import { Author } from './author.entity'
 
@@ -27,6 +27,14 @@ export class AuthorRepository {
 
   async getById(
     id: number,
+    options: { findOrFail: true; transaction?: Transaction },
+  ): Promise<Author>
+  async getById(
+    id: number,
+    options?: { findOrFail?: false; transaction?: Transaction },
+  ): Promise<Author | null>
+  async getById(
+    id: number,
     options: { findOrFail?: boolean; transaction?: Transaction } = {},
   ): Promise<Author | null> {
     const { findOrFail = false, transaction } = options
@@ -42,6 +50,14 @@ export class AuthorRepository {
     return author
   }
 
+  async getBySlug(
+    slug: string,
+    options: { findOrFail: true; transaction?: Transaction },
+  ): Promise<Author>
+  async getBySlug(
+    slug: string,
+    options?: { findOrFail?: false; transaction?: Transaction },
+  ): Promise<Author | null>
   async getBySlug(
     slug: string,
     options: { findOrFail?: boolean; transaction?: Transaction } = {},
