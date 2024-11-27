@@ -33,7 +33,7 @@ import { Quote } from '../quote/quote.entity'
 @Table({ tableName: 'authors', paranoid: true })
 export class Author extends Model<Partial<Author>> {
   @Column({
-    type: DataType.BIGINT.UNSIGNED,
+    type: DataType.BIGINT,
     primaryKey: true,
     autoIncrement: true,
   })

@@ -21,7 +21,15 @@ async function bootstrap() {
     .setVersion('1.0')
     .build()
   const documentFactory = () => SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('api', app, documentFactory)
+  SwaggerModule.setup('api', app, documentFactory, {
+    customJs: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui-bundle.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui-standalone-preset.min.js',
+    ],
+    customCssUrl: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui.min.css',
+    ],
+  })
 
   await app.listen(configService.getOrThrow<number>('app.port'), '0.0.0.0')
 

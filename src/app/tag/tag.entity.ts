@@ -33,7 +33,7 @@ import { QuoteTag } from './quote_tag.entity'
 @Table({ tableName: 'tags', paranoid: true })
 export class Tag extends Model<Partial<Tag>> {
   @Column({
-    type: DataType.BIGINT.UNSIGNED,
+    type: DataType.BIGINT,
     primaryKey: true,
     autoIncrement: true,
   })

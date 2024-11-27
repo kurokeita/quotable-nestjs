@@ -4,18 +4,13 @@ import { QueryInterface } from 'sequelize'
 
 module.exports = {
   up: async (queryInterface: QueryInterface) => {
-    await queryInterface.addIndex('quotes', ['content'], {
-      unique: true,
+    queryInterface.addIndex('quotes', ['content'], {
       name: 'quotes_content_unique',
+      unique: true,
     })
   },
 
   down: async (queryInterface: QueryInterface) => {
     await queryInterface.removeIndex('quotes', 'quotes_content_unique')
-
-    await queryInterface.sequelize.query(`
-      ALTER TABLE quotes
-      ADD FULLTEXT(content)
-    `)
   },
 }

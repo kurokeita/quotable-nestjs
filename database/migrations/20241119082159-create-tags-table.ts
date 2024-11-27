@@ -9,7 +9,7 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
       },
       name: {
         type: DataTypes.STRING,
@@ -35,7 +35,7 @@ module.exports = {
     // Create join table for many-to-many relationship between quotes and tags
     await queryInterface.createTable('quote_tags', {
       quoteId: {
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false,
         references: {
           model: 'quotes',
@@ -44,7 +44,7 @@ module.exports = {
         onDelete: 'CASCADE',
       },
       tagId: {
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false,
         references: {
           model: 'tags',
