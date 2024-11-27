@@ -19,6 +19,7 @@ import { QuoteTag } from './quote_tag.entity'
         model: Quote.unscoped(),
         attributes: [],
         duplicating: false,
+        through: { attributes: [] },
       },
     ],
     attributes: {
@@ -26,7 +27,6 @@ import { QuoteTag } from './quote_tag.entity'
         [Sequelize.fn('COUNT', Sequelize.col('quotes.id')), 'quotesCount'],
       ],
     },
-    having: Sequelize.literal('Tag.id IS NOT NULL'), // Make sure that we don't get this kind of Author instance `{id: null, name: null, ..., quotesCount: 0}`
     group: ['Tag.id'],
   },
 }))

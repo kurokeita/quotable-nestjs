@@ -26,7 +26,6 @@ import { Quote } from '../quote/quote.entity'
         [Sequelize.fn('COUNT', Sequelize.col('quotes.id')), 'quotesCount'],
       ],
     },
-    having: Sequelize.literal('Author.id IS NOT NULL'), // Make sure that we don't get this kind of Author instance `{id: null, name: null, ..., quotesCount: 0}`
     group: ['Author.id'],
   },
 }))
