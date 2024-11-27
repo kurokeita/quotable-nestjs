@@ -6,6 +6,7 @@ import { OrderEnum } from '../../enums/order.enum'
 import PaginatedResponse from '../../interfaces/paginated_response.interface'
 import { Author } from '../author/author.entity'
 import { AuthorRepository } from '../author/author.repository'
+import { DatabaseService } from '../database/database.service'
 import { Tag } from '../tag/tag.entity'
 import {
   CreateQuoteDto,
@@ -41,6 +42,7 @@ export class QuoteRepository {
     @InjectModel(Quote)
     private readonly quoteModel: typeof Quote,
     private readonly authorRepository: AuthorRepository,
+    private readonly databaseService: DatabaseService,
   ) {}
 
   async getById(
@@ -69,9 +71,10 @@ export class QuoteRepository {
   }
 
   async random(input: GetRandomQuoteDto): Promise<Quote | null> {
-    return await this.quoteModel
-      .scope(['defaultScope', 'random'])
-      .findOne(this.createFilter(input))
+    return await this.quoteModel.findOne({
+      ...this.createFilter(input),
+      order: Sequelize.literal(this.databaseService.random()),
+    })
   }
 
   async randomQuotes(input: GetRandomQuotesDto): Promise<Quote[]> {
@@ -84,7 +87,10 @@ export class QuoteRepository {
     return await this.quoteModel.findAll({
       ...this.createFilter(input),
       limit: limit,
-      order: [Sequelize.literal('rand()'), [sortBy, order]],
+      order: [
+        Sequelize.literal(this.databaseService.random()),
+        [sortBy, order],
+      ],
     })
   }
 
@@ -237,15 +243,25 @@ export class QuoteRepository {
 
     if (query) {
       const keywords = query
-        .split(/[\s,;]+/)
-        .map((w) => w + '*')
-        .join(',')
+        .replace(/[+\-<>~*"@]/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ')
 
-      filters.push(
-        Sequelize.literal(
-          `MATCH(content) AGAINST('${keywords}' IN BOOLEAN MODE)`,
-        ),
-      )
+      if (this.databaseService.getDialect() === 'postgres') {
+        // PostgreSQL full-text search
+        filters.push(
+          Sequelize.literal(
+            `to_tsvector('english', content) @@ to_tsquery('english', '${keywords.split(' ').join(' & ')}')`,
+          ),
+        )
+      } else {
+        // MySQL full-text search
+        filters.push(
+          Sequelize.literal(
+            `MATCH(content) AGAINST('${keywords}' IN BOOLEAN MODE)`,
+          ),
+        )
+      }
     }
 
     // Filter by content length if provided

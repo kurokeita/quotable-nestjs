@@ -9,11 +9,11 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
       },
       authorId: {
         allowNull: false,
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
         references: {
           model: 'authors',
           key: 'id',

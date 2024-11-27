@@ -9,7 +9,7 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: DataTypes.BIGINT.UNSIGNED,
+        type: DataTypes.BIGINT,
       },
       name: {
         type: DataTypes.STRING,

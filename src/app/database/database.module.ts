@@ -4,10 +4,12 @@ import { Author } from '../author/author.entity'
 import { Quote } from '../quote/quote.entity'
 import { QuoteTag } from '../tag/quote_tag.entity'
 import { Tag } from '../tag/tag.entity'
+import { DatabaseService } from './database.service'
 
 @Global()
 @Module({
   imports: [SequelizeModule.forFeature([Author, Quote, Tag, QuoteTag])],
-  exports: [SequelizeModule],
+  providers: [DatabaseService],
+  exports: [SequelizeModule, DatabaseService],
 })
 export class DatabaseModule {}

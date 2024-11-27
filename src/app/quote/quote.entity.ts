@@ -7,8 +7,6 @@ import {
   DefaultScope,
   ForeignKey,
   Model,
-  Scopes,
-  Sequelize,
   Table,
 } from 'sequelize-typescript'
 import { Author } from '../author/author.entity'
@@ -26,15 +24,10 @@ import { Tag } from '../tag/tag.entity'
     },
   ],
 }))
-@Scopes(() => ({
-  random: {
-    order: Sequelize.literal('rand()'),
-  },
-}))
 @Table({ tableName: 'quotes', paranoid: true })
 export class Quote extends Model<Partial<Quote>> {
   @Column({
-    type: DataType.BIGINT.UNSIGNED,
+    type: DataType.BIGINT,
     primaryKey: true,
     autoIncrement: true,
   })
@@ -46,7 +39,7 @@ export class Quote extends Model<Partial<Quote>> {
   content: string
 
   @ForeignKey(() => Author)
-  @Column({ type: DataType.BIGINT.UNSIGNED })
+  @Column({ type: DataType.BIGINT })
   authorId: number
 
   @Column({
