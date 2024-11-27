@@ -1,5 +1,6 @@
 import { registerAs } from '@nestjs/config'
 import { SequelizeModuleAsyncOptions } from '@nestjs/sequelize'
+import mysql2 from 'mysql2'
 import { Author } from '../app/author/author.entity'
 import { Quote } from '../app/quote/quote.entity'
 import { QuoteTag } from '../app/tag/quote_tag.entity'
@@ -10,6 +11,7 @@ export default registerAs(
   (): SequelizeModuleAsyncOptions =>
     ({
       dialect: 'mysql',
+      dialectModule: mysql2,
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '3306'),
       username: process.env.DB_USER,
