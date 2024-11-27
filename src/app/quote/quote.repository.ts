@@ -157,6 +157,19 @@ export class QuoteRepository {
     )
   }
 
+  async bulkUpsert(
+    input: CreateQuoteDto[],
+    options: { transaction: Transaction },
+  ): Promise<Quote[]> {
+    return await this.quoteModel.bulkCreate(
+      input.map((i) => ({
+        content: i.content,
+        authorId: i.authorId,
+      })),
+      { transaction: options.transaction, ignoreDuplicates: true },
+    )
+  }
+
   async update(
     id: number,
     input: UpdateQuoteDto,

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import Transaction from 'sequelize/types/transaction'
 import { Quote } from '../quote/quote.entity'
+import { QuoteTag } from './quote_tag.entity'
 import { IndexTagDto } from './tag.dto'
 import { Tag } from './tag.entity'
 import { TagRepository } from './tag.repository'
@@ -36,5 +37,42 @@ export class TagService {
     })
 
     return quote
+  }
+
+  async bulkSync(
+    quoteTags: Map<number, string[]>,
+    options: { transaction?: Transaction } = {},
+  ): Promise<void> {
+    const tags = Array.from(quoteTags.values()).flat()
+
+    const upsertedResult = await this.tagRepository.upsertMultiple(tags, {
+      transaction: options.transaction,
+    })
+
+    const newTags = upsertedResult.filter((t) => t.id)
+    const existedTagNames = upsertedResult
+      .filter((t) => !t.id)
+      .map((t) => t.name)
+
+    const existedTags = await this.tagRepository.getByNames(existedTagNames, {
+      transaction: options.transaction,
+    })
+
+    const tagsMap = new Map(
+      newTags.concat(existedTags).map((t) => [t.name, t.id]),
+    )
+
+    const dataToSync: QuoteTag[] = []
+    quoteTags.forEach((tags, quoteId) => {
+      dataToSync.push(
+        ...tags.map(
+          (t) => ({ quoteId: quoteId, tagId: tagsMap.get(t) }) as QuoteTag,
+        ),
+      )
+    })
+
+    await this.tagRepository.bulkUpsertQuoteTags(dataToSync, {
+      transaction: options.transaction,
+    })
   }
 }

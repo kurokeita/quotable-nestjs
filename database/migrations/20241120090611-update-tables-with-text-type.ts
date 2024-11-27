@@ -112,12 +112,12 @@ module.exports = {
     `)
 
     await queryInterface.sequelize.query(`
-      ALTER TABLE quotes
+      ALTER TABLE tags
       DROP INDEX unique_tags_name
     `)
 
     await queryInterface.sequelize.query(`
-      ALTER TABLE quotes
+      ALTER TABLE tags
       ALTER COLUMN createdAt
       SET DEFAULT NULL
     `)

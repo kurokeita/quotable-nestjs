@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger'
 import { Transform, Type } from 'class-transformer'
 import {
   IsArray,
+  IsDefined,
   IsEnum,
   IsIn,
   IsInt,
@@ -93,14 +94,17 @@ export class GetRandomQuoteDto extends OmitType(IndexQuotesDto, [
 export class CreateQuoteDto {
   @IsString()
   @ApiProperty()
+  @IsDefined()
   content: string
 
   @IsString()
+  @IsDefined()
   @ValidateIf((o) => o.authorId === undefined || o.authorId === null)
   @ApiProperty()
   author?: string
 
   @IsInt()
+  @IsDefined()
   @ValidateIf((o) => o.author === undefined || o.author === null)
   @ApiProperty()
   authorId?: number

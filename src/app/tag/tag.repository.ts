@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/sequelize'
 import { Op } from 'sequelize'
 import Transaction from 'sequelize/types/transaction'
+import { QuoteTag } from './quote_tag.entity'
 import { IndexTagDto } from './tag.dto'
 import { Tag } from './tag.entity'
 
@@ -20,6 +21,8 @@ export class TagRepository {
   constructor(
     @InjectModel(Tag)
     private readonly tagModel: typeof Tag,
+    @InjectModel(QuoteTag)
+    private readonly quoteTagModel: typeof QuoteTag,
   ) {}
 
   async getByNames(
@@ -46,8 +49,7 @@ export class TagRepository {
       names.map((name) => ({ name })),
       {
         transaction: options.transaction,
-        fields: ['name'],
-        updateOnDuplicate: ['name'],
+        ignoreDuplicates: true,
       },
     )
   }
@@ -61,6 +63,16 @@ export class TagRepository {
     return await this.tagModel.scope('withQuotesCount').findAll({
       order: [[sortBy, order]],
       transaction: options.transaction,
+    })
+  }
+
+  async bulkUpsertQuoteTags(
+    quoteTags: QuoteTag[],
+    options: { transaction?: Transaction } = {},
+  ): Promise<void> {
+    await this.quoteTagModel.bulkCreate(quoteTags, {
+      transaction: options.transaction,
+      ignoreDuplicates: true,
     })
   }
 }
