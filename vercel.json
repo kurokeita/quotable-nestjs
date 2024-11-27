@@ -1,18 +1,13 @@
 {
-    "version": 2,
-    "routes": [
+    "functions": {
+        "api/**/*.ts": {
+            "maxDuration": 10
+        }
+    },
+    "rewrites": [
         {
-            "src": "/(.*)",
-            "dest": "src/main.js",
-            "methods": [
-                "GET",
-                "POST",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "HEAD",
-                "OPTIONS"
-            ]
+            "source": "/(.*)",
+            "destination": "/api"
         }
     ]
 }
