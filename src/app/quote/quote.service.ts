@@ -3,6 +3,8 @@ import { Sequelize } from 'sequelize-typescript'
 import Transaction from 'sequelize/types/transaction'
 import PaginatedResponse from 'src/interfaces/paginated_response.interface'
 import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
+import { Author } from '../author/author.entity'
+import { AuthorService } from '../author/author.service'
 import { TagService } from '../tag/tag.service'
 import {
   CreateQuoteDto,
@@ -16,9 +18,12 @@ import { QuoteRepository } from './quote.repository'
 
 @Injectable()
 export class QuoteService {
+  public BULK_SIZE = 500
+
   constructor(
     private readonly quoteRepository: QuoteRepository,
     private readonly tagService: TagService,
+    private readonly authorService: AuthorService,
     private sequelize: Sequelize,
   ) {}
 
@@ -110,13 +115,85 @@ export class QuoteService {
     input: CreateQuoteDto[],
     options: { transaction: Transaction },
   ): Promise<BulkCreateResult<CreateQuoteDto>> {
-    // TODO: implement the bulk create logic here
+    const chunks = Array.from(
+      {
+        length: Math.ceil(input.length / this.BULK_SIZE),
+      },
+      (_, i) => {
+        return input.slice(i * this.BULK_SIZE, (i + 1) * this.BULK_SIZE)
+      },
+    ).filter((chunk) => chunk.length > 0)
+
+    const quotes: Quote[] = []
+    const skippedData: CreateQuoteDto[] = []
+
+    for (const chunk of chunks) {
+      const authorsById = await this.authorService.getByIds(
+        chunk.map((q) => q.authorId as number).filter(Boolean),
+        { transaction: options.transaction },
+      )
+      const mappedIds = new Map(authorsById.map((a) => [a.id, a]))
+
+      const authorsBySlug = await this.authorService.getBySlugs(
+        chunk.map((q) => q.author as string).filter(Boolean),
+        { transaction: options.transaction },
+      )
+      const mappedSlugs = new Map(authorsBySlug.map((a) => [a.slug, a]))
+
+      const convertedChunk = chunk.map((q) => ({
+        ...q,
+        authorId:
+          q.authorId ?? mappedSlugs.get(Author.getSlug(q.author as string))?.id,
+      }))
+      const contentMap = new Map(convertedChunk.map((q) => [q.content, q]))
+
+      const validatedData = convertedChunk.filter(
+        (q) =>
+          (q.authorId && mappedIds.has(q.authorId)) ||
+          (q.author && mappedSlugs.has(Author.getSlug(q.author as string))),
+      )
+
+      skippedData.push(
+        ...convertedChunk.filter(
+          (q) =>
+            !(
+              (q.authorId && mappedIds.has(q.authorId)) ||
+              (q.author && mappedSlugs.has(Author.getSlug(q.author as string)))
+            ),
+        ),
+      )
+
+      const result = await this.quoteRepository.bulkUpsert(
+        validatedData,
+        options,
+      )
+      const inserted = result.filter((q) => q.id)
+      quotes.push(...inserted)
+      const quoteTags = new Map(
+        inserted.map((q) => [q.id, contentMap.get(q.content)?.tags ?? []]),
+      )
+      await this.tagService.bulkSync(quoteTags, {
+        transaction: options.transaction,
+      })
+
+      skippedData.push(
+        ...result
+          .filter((q) => !q.id)
+          .map(
+            (q) =>
+              ({
+                content: q.content,
+                authorId: q.authorId,
+              }) as CreateQuoteDto,
+          ),
+      )
+    }
 
     return {
-      input: 0,
-      created: 0,
-      skipped: 0,
-      skippedData: [],
+      input: input.length,
+      created: quotes.length,
+      skipped: skippedData.length,
+      skippedData: skippedData,
     }
   }
 }

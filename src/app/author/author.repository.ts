@@ -1,6 +1,6 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/sequelize'
-import { Transaction } from 'sequelize'
+import { Op, Transaction } from 'sequelize'
 import { OrderEnum } from '../../enums/order.enum'
 import PaginatedResponse from '../../interfaces/paginated_response.interface'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
@@ -50,6 +50,16 @@ export class AuthorRepository {
     return author
   }
 
+  async getByIds(
+    ids: number[],
+    options: { transaction?: Transaction } = {},
+  ): Promise<Author[]> {
+    return await this.authorModel.findAll({
+      where: { id: ids },
+      transaction: options.transaction,
+    })
+  }
+
   async getBySlug(
     slug: string,
     options: { findOrFail: true; transaction?: Transaction },
@@ -78,6 +88,16 @@ export class AuthorRepository {
     return author
   }
 
+  async getBySlugs(
+    slugs: string[],
+    options: { transaction?: Transaction } = {},
+  ): Promise<Author[]> {
+    return await this.authorModel.findAll({
+      where: { slug: { [Op.in]: slugs.map((slug) => Author.getSlug(slug)) } },
+      transaction: options.transaction,
+    })
+  }
+
   async create(
     input: CreateAuthorDto,
     options: { transaction?: Transaction } = {},
@@ -91,6 +111,22 @@ export class AuthorRepository {
         link: input.link,
       },
       { transaction: options.transaction },
+    )
+  }
+
+  async bulkUpsert(
+    input: CreateAuthorDto[],
+    options: { transaction: Transaction },
+  ): Promise<Author[]> {
+    return await this.authorModel.bulkCreate(
+      input.map((i) => ({
+        name: i.name,
+        slug: Author.getSlug(i.name),
+        description: i.description,
+        bio: i.bio,
+        link: i.link,
+      })),
+      { transaction: options.transaction, ignoreDuplicates: true },
     )
   }
 

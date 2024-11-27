@@ -2,10 +2,13 @@ import { Injectable } from '@nestjs/common'
 import Transaction from 'sequelize/types/transaction'
 import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
+import { Author } from './author.entity'
 import { AuthorRepository } from './author.repository'
 
 @Injectable()
 export class AuthorService {
+  public BULK_SIZE = 500
+
   constructor(protected readonly authorRepository: AuthorRepository) {}
 
   async create(input: CreateAuthorDto) {
@@ -36,13 +39,53 @@ export class AuthorService {
     input: CreateAuthorDto[],
     options: { transaction: Transaction },
   ): Promise<BulkCreateResult<CreateAuthorDto>> {
-    // TODO: implement the bulk create logic here
+    const chunks = Array.from(
+      {
+        length: Math.ceil(input.length / this.BULK_SIZE),
+      },
+      (_, i) => {
+        return input.slice(i * this.BULK_SIZE, (i + 1) * this.BULK_SIZE)
+      },
+    ).filter((chunk) => chunk.length > 0)
+
+    const authors: Author[] = []
+    const skippedData: CreateAuthorDto[] = []
+
+    for (const chunk of chunks) {
+      const result = await this.authorRepository.bulkUpsert(chunk, options)
+      authors.push(...result.filter((a) => a.id))
+
+      skippedData.push(
+        ...result
+          .filter((a) => !a.id)
+          .map(
+            (a) =>
+              ({
+                name: a.name,
+                description: a.description,
+                bio: a.bio,
+                link: a.link,
+              }) as CreateAuthorDto,
+          ),
+      )
+    }
 
     return {
-      input: 0,
-      created: 0,
-      skipped: 0,
-      skippedData: [],
+      input: input.length,
+      created: authors.length,
+      skipped: skippedData.length,
+      skippedData: skippedData,
     }
+  }
+
+  async getByIds(ids: number[], options: { transaction?: Transaction } = {}) {
+    return await this.authorRepository.getByIds(ids, options)
+  }
+
+  async getBySlugs(
+    slugs: string[],
+    options: { transaction?: Transaction } = {},
+  ) {
+    return await this.authorRepository.getBySlugs(slugs, options)
   }
 }

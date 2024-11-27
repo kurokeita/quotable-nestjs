@@ -24,15 +24,18 @@ export class UploadService {
   }> {
     const content = JSON.parse(file.buffer.toString())
     const uploadContentDto = plainToInstance(UploadContentDto, content)
+    const originalCount = {
+      authors: uploadContentDto.authors?.length ?? 0,
+      quotes: uploadContentDto.quotes?.length ?? 0,
+    }
 
-    // TODO: counting of original data must start here before the filter
-    const authors = uploadContentDto.authors?.filter((i) => i.name) ?? []
-    const quotes =
+    const authorsInput = uploadContentDto.authors?.filter((i) => i.name) ?? []
+    const quotesInput =
       uploadContentDto.quotes?.filter(
         (i) => i.content && (i.author || i.authorId),
       ) ?? []
 
-    if (authors.length === 0 || quotes.length === 0) {
+    if (authorsInput.length === 0 && quotesInput.length === 0) {
       return {
         authors: { input: 0, created: 0, skipped: 0, skippedData: [] },
         quotes: { input: 0, created: 0, skipped: 0, skippedData: [] },
@@ -42,12 +45,24 @@ export class UploadService {
     const t = await this.sequelize.transaction()
 
     try {
-      // TODO: implementing bulk create for authors and quotes, also bulk syncing tags
+      const createAuthorResult = await this.authorService.bulkCreate(
+        authorsInput,
+        {
+          transaction: t,
+        },
+      )
+      const createQuoteResult = await this.quoteService.bulkCreate(
+        quotesInput,
+        {
+          transaction: t,
+        },
+      )
+
       await t.commit()
 
       return {
-        authors: { input: 0, created: 0, skipped: 0, skippedData: [] },
-        quotes: { input: 0, created: 0, skipped: 0, skippedData: [] },
+        authors: { ...createAuthorResult, input: originalCount.authors },
+        quotes: { ...createQuoteResult, input: originalCount.quotes },
       }
     } catch (e) {
       await t.rollback()
