@@ -16,6 +16,18 @@ async function bootstrap() {
     }),
   )
 
+  if (configService.get<boolean>('app.resource_protection')) {
+    const resourceManipulationKey = configService.getOrThrow<string>(
+      'app.resource_manipulation_api_key',
+    )
+
+    if (resourceManipulationKey.length < 32) {
+      throw new Error(
+        'resource_manipulation_api_key must be at least 32 characters long',
+      )
+    }
+  }
+
   const config = new DocumentBuilder()
     .setTitle('Quotable API')
     .setVersion('1.0')
