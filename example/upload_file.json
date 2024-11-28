@@ -1,0 +1,20 @@
+{
+    "authors": [
+        {
+            "name": "author name",
+            "bio": "author bio",
+            "description": "author description",
+            "link": "author link"
+        }
+    ],
+    "quotes": [
+        {
+            "author": "author name",
+            "content": "quote content",
+            "tags": [
+                "tag 1",
+                "tag 2"
+            ]
+        }
+    ]
+}
