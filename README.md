@@ -4,6 +4,8 @@ This is an implementation of the [Quotable](https://github.com/lukePeavey/quotab
 
 ## [API Reference](https://quotable.kurokeita.dev)
 
+## [Development](./documents/development.md)
+
 ## [Production build](./documents/production.md)
 
 ## Disclaimer
