@@ -84,13 +84,6 @@ export class GetRandomQuotesDto extends OmitType(IndexQuotesDto, [
   'page',
 ] as const) {}
 
-export class GetRandomQuoteDto extends OmitType(IndexQuotesDto, [
-  'page',
-  'limit',
-  'order',
-  'sortBy',
-] as const) {}
-
 export class CreateQuoteDto {
   @IsString()
   @ApiProperty()

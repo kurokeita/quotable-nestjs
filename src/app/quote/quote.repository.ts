@@ -10,7 +10,6 @@ import { DatabaseService } from '../database/database.service'
 import { Tag } from '../tag/tag.entity'
 import {
   CreateQuoteDto,
-  GetRandomQuoteDto,
   GetRandomQuotesDto,
   IndexQuotesDto,
   UpdateQuoteDto,
@@ -49,6 +48,7 @@ export class QuoteRepository {
     id: number,
     options: { findOrFail: true; transaction?: Transaction },
   ): Promise<Quote>
+
   async getById(
     id: number,
     options?: { findOrFail?: false; transaction?: Transaction },
@@ -70,7 +70,7 @@ export class QuoteRepository {
     return quote
   }
 
-  async random(input: GetRandomQuoteDto): Promise<Quote | null> {
+  async random(input: GetRandomQuotesDto): Promise<Quote | null> {
     return await this.quoteModel.findOne({
       ...this.createFilter(input),
       order: Sequelize.literal(this.databaseService.random()),

@@ -9,10 +9,9 @@ import {
   Post,
   Query,
 } from '@nestjs/common'
-import { ApiHeader, ApiTags } from '@nestjs/swagger'
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger'
 import {
   CreateQuoteDto,
-  GetRandomQuoteDto,
   GetRandomQuotesDto,
   IndexQuotesDto,
   UpdateQuoteDto,
@@ -24,18 +23,16 @@ import { QuoteService } from './quote.service'
 export class QuoteController {
   constructor(private readonly quoteService: QuoteService) {}
 
+  @ApiOperation({
+    summary: 'Get random quote(s)',
+    description:
+      'Returns either a single random quote or multiple random quotes based on the limit parameter',
+  })
   @Get('random')
-  async random(@Query() request: GetRandomQuoteDto) {
-    return {
-      quote: await this.quoteService.getRandomQuote(request),
-    }
-  }
+  async random(@Query() request: GetRandomQuotesDto) {
+    const { isMultiple, data } = await this.quoteService.getRandom(request)
 
-  @Get('random/quotes')
-  async randomQuotes(@Query() request: GetRandomQuotesDto) {
-    return {
-      quotes: await this.quoteService.getRandomQuotes(request),
-    }
+    return isMultiple ? { quotes: data } : { quote: data }
   }
 
   @Get()
