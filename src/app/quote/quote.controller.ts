@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
+import { ApiHeader, ApiTags } from '@nestjs/swagger'
 import {
   CreateQuoteDto,
   GetRandomQuoteDto,
@@ -44,11 +44,21 @@ export class QuoteController {
   }
 
   @Post()
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async create(@Body() request: CreateQuoteDto) {
     return await this.quoteService.create(request)
   }
 
   @Patch(':id')
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() request: UpdateQuoteDto,
@@ -62,6 +72,11 @@ export class QuoteController {
   }
 
   @Delete(':id')
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async delete(@Param('id', ParseIntPipe) id: number) {
     await this.quoteService.delete(id)
 
