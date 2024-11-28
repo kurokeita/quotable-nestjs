@@ -32,7 +32,8 @@ export class UploadController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'JSON file containing quotes and authors data',
+          description:
+            'JSON file containing quotes and authors data. See example format at: https://github.com/kurokeita/quotable-nestjs/blob/main/example/upload_file.json',
         },
       },
       required: ['file'],

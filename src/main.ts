@@ -31,6 +31,10 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Quotable API')
     .setVersion('1.0')
+    .setExternalDoc(
+      'GitHub Repository',
+      'https://github.com/kurokeita/quotable-nestjs',
+    )
     .build()
   const documentFactory = () => SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('/', app, documentFactory, {
