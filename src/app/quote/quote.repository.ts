@@ -102,14 +102,20 @@ export class QuoteRepository {
       order = this.DEFAULT_ORDER,
     } = input
 
-    const { count, rows } = await this.quoteModel.findAndCountAll({
-      ...this.createFilter(input),
-      limit,
-      offset: limit * page,
-      order: [[sortBy, order]],
-      distinct: true,
-      col: 'Quote.id',
-    })
+    // Can not use the `findAndCountAll` because `GROUP BY` will mess up the count query
+    const [count, rows] = await Promise.all([
+      this.quoteModel.unscoped().count({
+        ...this.createFilter(input),
+        distinct: true,
+        col: 'id',
+      }),
+      this.quoteModel.findAll({
+        ...this.createFilter(input),
+        limit,
+        offset: limit * page,
+        order: [[sortBy, order]],
+      }),
+    ])
 
     const lastPage = Math.max(0, Math.ceil(count / limit) - 1)
 

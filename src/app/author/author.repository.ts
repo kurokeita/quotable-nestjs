@@ -178,16 +178,20 @@ export class AuthorRepository {
       order = this.DEFAULT_ORDER,
     } = input
 
-    const { count, rows } = await this.authorModel
-      .scope('withQuotesCount')
-      .findAndCountAll({
+    // Can not use the `findAndCountAll` because `GROUP BY` will mess up the count query
+    const [count, rows] = await Promise.all([
+      this.authorModel.unscoped().count({
+        transaction: options.transaction,
+        distinct: true,
+        col: 'id',
+      }),
+      this.authorModel.scope('withQuotesCount').findAll({
         limit,
         offset: limit * page,
         order: [[sortBy, order]],
         transaction: options.transaction,
-        distinct: true,
-        col: 'Author.id',
-      })
+      }),
+    ])
 
     const lastPage = Math.max(0, Math.ceil(count / limit) - 1)
 
