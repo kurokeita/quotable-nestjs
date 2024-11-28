@@ -5,7 +5,10 @@
 ```bash
 # install dependencies
 $ yarn install
+$ cp .env.example .env
 ```
+
+Set the appropriate environment variables in the `.env` file.
 
 ## Compile and run the project
 

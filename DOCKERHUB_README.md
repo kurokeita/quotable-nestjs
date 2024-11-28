@@ -1,12 +1,18 @@
-# Production build
+# Quotable API
 
-## Using Docker
+Quotable is a free, open-source quotations API. It was built to support teachers, students, writers, researchers, or anyone else who needs access to quotations for their work.
 
-### Build and tag the docker image
+## Features
 
-`docker build --tag {tag_name} .`
+- RESTful API interface.
+- Supports multiple databases (PostgreSQL, MySQL, MariaDB).
+- Built with NestJS and Sequelize.
+- Fully documented API with Swagger.
+- Docker support.
 
-### Available environment variables
+## [API Reference](https://quotable.kurokeita.dev)
+
+## Available environment variables
 
 - `NODE_ENV`: `development` or `production`. Set to `development` for a debug run with SQL queries logging.
 - `RESOURCE_PROTECTION`: `true` or `false`. Set to `true` to enable resource protection.
@@ -19,7 +25,7 @@
 - `DB_NAME`
 - `APP_PORT`
 
-### Run the docker image
+## Run the docker image
 
 ```sh
   docker run --name {CONTAINER_NAME} \
@@ -32,6 +38,10 @@
     -e DB_PASSWORD="{DB_PASSWORD}" \
     -e DB_USER="{DB_USER}" \
     -e DB_NAME="{DB_NAME}" \
-    -p {APP_PORT}:3000 \
+    -p {APP_PORT}:{APP_PORT} \
     {tag_name}
 ```
+
+## License
+
+This project is [MIT](./LICENSE) licensed.
