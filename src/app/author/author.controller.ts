@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
+import { ApiHeader, ApiTags } from '@nestjs/swagger'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
 import { AuthorService } from './author.service'
 
@@ -34,11 +34,21 @@ export class AuthorController {
   }
 
   @Post('/')
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async create(@Body() request: CreateAuthorDto) {
     return await this.authorService.create(request)
   }
 
   @Patch('/:id')
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() request: UpdateAuthorDto,
@@ -47,6 +57,11 @@ export class AuthorController {
   }
 
   @Delete('/:id')
+  @ApiHeader({
+    name: 'x-api-key',
+    description: 'the resource manipulation api key',
+    required: true,
+  })
   async delete(@Param('id', ParseIntPipe) id: number) {
     return await this.authorService.delete(id)
   }
