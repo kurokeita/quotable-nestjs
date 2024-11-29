@@ -69,6 +69,25 @@ export class QuoteRepository {
     return quote
   }
 
+  async getByIds(
+    ids: number[],
+    options: {
+      sortBy?: QuoteSortByEnum
+      order?: OrderEnum
+      transaction?: Transaction
+    } = {},
+  ): Promise<Quote[]> {
+    const { sortBy = this.DEFAULT_SORT_BY, order = this.DEFAULT_ORDER } =
+      options
+
+    return this.quoteModel.findAll({
+      where: { id: { [Op.in]: ids } },
+      include: [Author, Tag],
+      transaction: options.transaction,
+      order: [[sortBy, order]],
+    })
+  }
+
   async random(input: GetRandomQuotesDto): Promise<Quote | null> {
     const quote = await this.quoteModel.findOne({
       ...this.createFilter(input),
@@ -87,11 +106,21 @@ export class QuoteRepository {
       order = this.DEFAULT_ORDER,
     } = input
 
-    return await this.quoteModel.findAll({
+    const quotes = await this.quoteModel.findAll({
       ...this.createFilter(input),
       limit: limit,
       order: [Sequelize.fn('RANDOM'), [sortBy, order]],
     })
+
+    // Why this? Because of a bug in Sequelize where `LIMIT` would break the query with top level complex clauses
+    // Reference: https://github.com/sequelize/sequelize/issues/12971
+    return await this.getByIds(
+      quotes.map((q) => q.id),
+      {
+        sortBy: sortBy,
+        order: order,
+      },
+    )
   }
 
   async index(input: IndexQuotesDto): Promise<PaginatedResponse<Quote>> {

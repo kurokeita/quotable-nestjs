@@ -14,20 +14,19 @@ import {
 import * as _ from 'lodash'
 import { OrderEnum } from '../../enums/order.enum'
 import { PagingLimitEnum } from '../../enums/paging_limit.enum'
-import { AuthorSortByEnum } from '../author/author.repository'
 import { QuoteSortByEnum } from './quote.repository'
 
 export class IndexQuotesDto {
-  @IsEnum(AuthorSortByEnum)
+  @IsEnum(QuoteSortByEnum)
   @IsOptional()
   @ApiPropertyOptional({
-    enum: Object.keys(AuthorSortByEnum).map((k) => _.camelCase(_.toLower(k))),
+    enum: Object.keys(QuoteSortByEnum).map((k) => _.camelCase(_.toLower(k))),
   })
   @Transform(({ value }) => {
     if (!value) return value
 
-    return AuthorSortByEnum[
-      _.toUpper(_.snakeCase(value)) as keyof typeof AuthorSortByEnum
+    return QuoteSortByEnum[
+      _.toUpper(_.snakeCase(value)) as keyof typeof QuoteSortByEnum
     ]
   })
   sortBy: QuoteSortByEnum
