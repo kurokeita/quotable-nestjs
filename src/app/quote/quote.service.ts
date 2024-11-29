@@ -8,13 +8,16 @@ import { AuthorService } from '../author/author.service'
 import { TagService } from '../tag/tag.service'
 import {
   CreateQuoteDto,
-  GetRandomQuoteDto,
   GetRandomQuotesDto,
   IndexQuotesDto,
   UpdateQuoteDto,
 } from './quote.dto'
 import { Quote } from './quote.entity'
 import { QuoteRepository } from './quote.repository'
+
+type RandomQuoteResult =
+  | { isMultiple: true; data: Quote[] }
+  | { isMultiple: false; data: Quote | null }
 
 @Injectable()
 export class QuoteService {
@@ -27,12 +30,18 @@ export class QuoteService {
     private sequelize: Sequelize,
   ) {}
 
-  async getRandomQuote(request: GetRandomQuoteDto): Promise<Quote | null> {
-    return await this.quoteRepository.random(request)
-  }
+  async getRandom(request: GetRandomQuotesDto): Promise<RandomQuoteResult> {
+    if (request.limit) {
+      return {
+        isMultiple: true,
+        data: await this.quoteRepository.randomQuotes(request),
+      }
+    }
 
-  async getRandomQuotes(request: GetRandomQuotesDto): Promise<Quote[]> {
-    return await this.quoteRepository.randomQuotes(request)
+    return {
+      isMultiple: false,
+      data: await this.quoteRepository.random(request),
+    }
   }
 
   async index(request: IndexQuotesDto): Promise<PaginatedResponse<Quote>> {

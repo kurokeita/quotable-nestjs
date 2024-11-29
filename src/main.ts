@@ -31,6 +31,10 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Quotable API')
     .setVersion('1.0')
+    .setExternalDoc(
+      'GitHub Repository',
+      'https://github.com/kurokeita/quotable-nestjs',
+    )
     .build()
   const documentFactory = () => SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('/', app, documentFactory, {
@@ -41,6 +45,8 @@ async function bootstrap() {
     customCssUrl: [
       'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui.min.css',
     ],
+    customfavIcon:
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.18.2/favicon-32x32.png',
   })
 
   await app.listen(configService.getOrThrow<number>('app.port'), '0.0.0.0')
