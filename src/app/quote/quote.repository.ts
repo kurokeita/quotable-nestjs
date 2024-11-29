@@ -1,12 +1,11 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/sequelize'
-import { FindOptions, Includeable, Op, Sequelize, Transaction } from 'sequelize'
-import { Literal, Where } from 'sequelize/types/utils'
+import { FindOptions, Includeable, Op, Transaction } from 'sequelize'
+import { Sequelize } from 'sequelize-typescript'
 import { OrderEnum } from '../../enums/order.enum'
 import PaginatedResponse from '../../interfaces/paginated_response.interface'
 import { Author } from '../author/author.entity'
 import { AuthorRepository } from '../author/author.repository'
-import { DatabaseService } from '../database/database.service'
 import { Tag } from '../tag/tag.entity'
 import {
   CreateQuoteDto,
@@ -41,7 +40,7 @@ export class QuoteRepository {
     @InjectModel(Quote)
     private readonly quoteModel: typeof Quote,
     private readonly authorRepository: AuthorRepository,
-    private readonly databaseService: DatabaseService,
+    private readonly sequelize: Sequelize,
   ) {}
 
   async getById(
@@ -71,10 +70,14 @@ export class QuoteRepository {
   }
 
   async random(input: GetRandomQuotesDto): Promise<Quote | null> {
-    return await this.quoteModel.findOne({
+    const quote = await this.quoteModel.findOne({
       ...this.createFilter(input),
-      order: Sequelize.literal(this.databaseService.random()),
+      order: Sequelize.fn('RANDOM'),
     })
+
+    // Why this? Because of a bug in Sequelize where `LIMIT` would break the query with top level complex clauses
+    // Reference: https://github.com/sequelize/sequelize/issues/12971
+    return quote ? await this.getById(quote.id, { findOrFail: true }) : null
   }
 
   async randomQuotes(input: GetRandomQuotesDto): Promise<Quote[]> {
@@ -87,10 +90,7 @@ export class QuoteRepository {
     return await this.quoteModel.findAll({
       ...this.createFilter(input),
       limit: limit,
-      order: [
-        Sequelize.literal(this.databaseService.random()),
-        [sortBy, order],
-      ],
+      order: [Sequelize.fn('RANDOM'), [sortBy, order]],
     })
   }
 
@@ -225,13 +225,17 @@ export class QuoteRepository {
   private createFilter(params: QuoteFilters): FindOptions<Quote> {
     const { author, query, minLength, maxLength, tags } = params
 
+    const tagFilters = this.filterByTags(tags)
+    const authorFilter = this.filterByAuthor(author)
+    const contentFilters = this.filterByContent({ query, minLength, maxLength })
+
     return {
-      where: {
-        [Op.and]: this.filterByContent({ query, minLength, maxLength }),
-      },
-      include: [this.filterByAuthor(author), this.filterByTags(tags)].filter(
-        (f) => f !== null,
-      ),
+      where: contentFilters.where,
+      include: [
+        ...(tagFilters.include || []),
+        ...(authorFilter.include || []),
+      ].filter(Boolean),
+      subQuery: false,
     }
   }
 
@@ -239,9 +243,9 @@ export class QuoteRepository {
     query?: string
     minLength?: number
     maxLength?: number
-  }): Array<Literal | Where> {
+  }): FindOptions<Quote> {
     if (!queries) {
-      return []
+      return {}
     }
 
     const filters = []
@@ -253,21 +257,18 @@ export class QuoteRepository {
         .trim()
         .replace(/\s+/g, ' ')
 
-      if (this.databaseService.getDialect() === 'postgres') {
-        // PostgreSQL full-text search
-        filters.push(
-          Sequelize.literal(
-            `to_tsvector('english', content) @@ to_tsquery('english', '${keywords.split(' ').join(' & ')}')`,
+      // PostgreSQL full-text search
+      filters.push(
+        Sequelize.where(
+          Sequelize.fn('to_tsvector', 'english', Sequelize.col('content')),
+          '@@',
+          Sequelize.fn(
+            'to_tsquery',
+            'english',
+            keywords.split(' ').join(' & '),
           ),
-        )
-      } else {
-        // MySQL full-text search
-        filters.push(
-          Sequelize.literal(
-            `MATCH(content) AGAINST('${keywords}' IN BOOLEAN MODE)`,
-          ),
-        )
-      }
+        ),
+      )
     }
 
     // Filter by content length if provided
@@ -291,40 +292,61 @@ export class QuoteRepository {
       )
     }
 
-    return filters
+    return {
+      where: {
+        [Op.and]: filters,
+      },
+    }
   }
 
-  private filterByAuthor(author?: string): Includeable | null {
+  private filterByAuthor(
+    author?: string,
+  ): FindOptions<Quote> & { include?: Includeable[] } {
     if (!author) {
-      return null
+      return {}
     }
 
     return {
-      model: Author,
       where: {
-        slug: Author.getSlug(author),
+        [Op.and]: [
+          {
+            '$author.slug$': Author.getSlug(author),
+          },
+        ],
       },
-      require: true,
-    } as Includeable
+      include: [
+        {
+          model: Author,
+          required: true,
+        },
+      ],
+    }
   }
 
-  private filterByTags(tags?: string): Includeable | null {
+  private filterByTags(
+    tags?: string,
+  ): FindOptions<Quote> & { include?: Includeable[] } {
     if (!tags) {
-      return null
+      return {}
     }
 
     if (tags.includes('|')) {
       const tagsList: string[] = tags.split('|')
 
       return {
-        model: Tag,
-        where: {
-          name: {
-            [Op.in]: tagsList,
+        include: [
+          {
+            model: Tag,
+            as: Tag.tableName,
+            where: {
+              name: {
+                [Op.in]: tagsList,
+              },
+            },
+            required: true,
           },
-        },
-        required: true,
-      } as Includeable
+        ],
+      }
     }
 
     const tagsList: string[] = tags.split(',')
@@ -333,22 +355,23 @@ export class QuoteRepository {
     const tagConditions = tagsList.map((tag) =>
       Sequelize.literal(`EXISTS (
         SELECT 1 FROM tags
-        INNER JOIN quote_tags ON tags.id = quote_tags.tagId
-        WHERE quote_tags.quoteId = \`Quote\`.\`id\`
-        AND tags.name = '${tag}'
+        INNER JOIN quote_tags ON "tags"."id" = "quote_tags"."tagId"
+        WHERE "quote_tags"."quoteId" = "Quote"."id"
+        AND "tags"."name" = ${this.sequelize.escape(tag)}
       )`),
     )
 
     return {
-      model: Tag,
-      required: true,
-      through: {
-        attributes: [],
-      },
-      duplicating: false,
-      where: {
-        [Op.and]: tagConditions,
-      },
-    } as Includeable
+      include: [
+        {
+          model: Tag,
+          as: Tag.tableName,
+          required: true,
+          where: {
+            [Op.and]: tagConditions,
+          },
+        },
+      ],
+    }
   }
 }
