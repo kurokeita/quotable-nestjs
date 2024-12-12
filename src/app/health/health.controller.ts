@@ -3,23 +3,23 @@ import {
   HealthCheck,
   HealthCheckService,
   MemoryHealthIndicator,
-  SequelizeHealthIndicator,
 } from '@nestjs/terminus'
+import { DbHealthIndicator } from 'src/db/db.health'
 
 @Controller('api/health')
 export class HealthController {
   constructor(
     private health: HealthCheckService,
     private memory: MemoryHealthIndicator,
-    private db: SequelizeHealthIndicator,
+    private db: DbHealthIndicator,
   ) {}
 
   @Get()
   @HealthCheck()
   check() {
     return this.health.check([
-      () => this.db.pingCheck('database'),
       () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
+      () => this.db.isHealthy('database'),
     ])
   }
 }

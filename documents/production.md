@@ -11,7 +11,6 @@
 - `NODE_ENV`: `development` or `production`. Set to `development` for a debug run with SQL queries logging.
 - `RESOURCE_PROTECTION`: `true` or `false`. Set to `true` to enable resource protection.
 - `RESOURCE_MANIPULATION_API_KEY`: 32 characters long string, required if `RESOURCE_PROTECTION` is set to `true`.
-- `DB_DIALECT`: `postgres` or `mysql`.
 - `DB_HOST`
 - `DB_PORT`
 - `DB_PASSWORD`
@@ -26,7 +25,6 @@
     -e NODE_ENV="production" \
     -e RESOURCE_PROTECTION="true" \
     -e RESOURCE_MANIPULATION_API_KEY="{RESOURCE_MANIPULATION_API_KEY}" \
-    -e DB_DIALECT="{DB_DIALECT}" \
     -e DB_HOST="{DB_HOST}" \
     -e DB_PORT="{DB_PORT}" \
     -e DB_PASSWORD="{DB_PASSWORD}" \

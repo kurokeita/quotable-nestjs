@@ -1,0 +1,1 @@
+ALTER TABLE "quotes" ALTER COLUMN "content" SET NOT NULL;

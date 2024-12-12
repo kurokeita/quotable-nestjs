@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
-import { Sequelize } from 'sequelize-typescript'
-import Transaction from 'sequelize/types/transaction'
+import { getClient } from 'src/db'
 import PaginatedResponse from 'src/interfaces/paginated_response.interface'
+import { Transaction } from '../../db/index'
+import { getAuthorSlug } from '../../db/schema/author.schema'
+import { Quote, QuoteWithRelationships } from '../../db/schema/quote.schema'
 import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
-import { Author } from '../author/author.entity'
 import { AuthorService } from '../author/author.service'
 import { TagService } from '../tag/tag.service'
 import {
@@ -12,7 +13,6 @@ import {
   IndexQuotesDto,
   UpdateQuoteDto,
 } from './quote.dto'
-import { Quote } from './quote.entity'
 import { QuoteRepository } from './quote.repository'
 
 type RandomQuoteResult =
@@ -27,7 +27,6 @@ export class QuoteService {
     private readonly quoteRepository: QuoteRepository,
     private readonly tagService: TagService,
     private readonly authorService: AuthorService,
-    private sequelize: Sequelize,
   ) {}
 
   async getRandom(request: GetRandomQuotesDto): Promise<RandomQuoteResult> {
@@ -44,80 +43,58 @@ export class QuoteService {
     }
   }
 
-  async index(request: IndexQuotesDto): Promise<PaginatedResponse<Quote>> {
+  async index(
+    request: IndexQuotesDto,
+  ): Promise<PaginatedResponse<QuoteWithRelationships>> {
     return await this.quoteRepository.index(request)
   }
 
   async create(request: CreateQuoteDto): Promise<Quote> {
-    const t = await this.sequelize.transaction()
-
-    try {
+    return await getClient().transaction(async (t) => {
       const quote = await this.quoteRepository.create(request, {
-        t: t,
+        transaction: t,
       })
 
       await this.tagService.sync(quote, request.tags, {
-        t: t,
+        transaction: t,
       })
 
-      const result = await this.quoteRepository.getById(quote.id, {
+      return await this.quoteRepository.getById(quote.id, {
         transaction: t,
         findOrFail: true,
       })
-
-      await t.commit()
-
-      return result
-    } catch (e) {
-      await t.rollback()
-
-      throw e
-    }
+    })
   }
 
   async update(id: number, request: UpdateQuoteDto): Promise<Quote> {
-    const t = await this.sequelize.transaction()
-
-    try {
+    return await getClient().transaction(async (t) => {
       const quote = await this.quoteRepository.update(id, request, {
         transaction: t,
       })
 
       await this.tagService.sync(quote, request.tags, {
-        t: t,
+        transaction: t,
       })
 
-      const result = await this.quoteRepository.getById(quote.id, {
+      return await this.quoteRepository.getById(quote.id, {
         transaction: t,
         findOrFail: true,
       })
-
-      await t.commit()
-
-      return result
-    } catch (e) {
-      await t.rollback()
-
-      throw e
-    }
+    })
   }
 
-  async getById(id: number): Promise<Quote> {
+  async getById(id: number): Promise<QuoteWithRelationships> {
     return await this.quoteRepository.getById(id, { findOrFail: true })
   }
 
-  async delete(id: number): Promise<void> {
-    const t = await this.sequelize.transaction()
+  async delete(id: number): Promise<Quote> {
+    return await getClient().transaction(async (t) => {
+      const quote = await this.quoteRepository.delete(id, {
+        transaction: t,
+      })
 
-    try {
-      await this.quoteRepository.delete(id, { transaction: t })
-
-      await t.commit()
-    } catch (e) {
-      await t.rollback()
-
-      throw e
-    }
+      return quote
+    })
   }
 
   async bulkCreate(
@@ -152,14 +129,14 @@ export class QuoteService {
       const convertedChunk = chunk.map((q) => ({
         ...q,
         authorId:
-          q.authorId ?? mappedSlugs.get(Author.getSlug(q.author as string))?.id,
+          q.authorId ?? mappedSlugs.get(getAuthorSlug(q.author as string))?.id,
       }))
       const contentMap = new Map(convertedChunk.map((q) => [q.content, q]))
 
       const validatedData = convertedChunk.filter(
         (q) =>
           (q.authorId && mappedIds.has(q.authorId)) ||
-          (q.author && mappedSlugs.has(Author.getSlug(q.author as string))),
+          (q.author && mappedSlugs.has(getAuthorSlug(q.author as string))),
       )
 
       skippedData.push(
@@ -167,7 +144,7 @@ export class QuoteService {
           (q) =>
             !(
               (q.authorId && mappedIds.has(q.authorId)) ||
-              (q.author && mappedSlugs.has(Author.getSlug(q.author as string)))
+              (q.author && mappedSlugs.has(getAuthorSlug(q.author as string)))
             ),
         ),
       )
@@ -176,18 +153,21 @@ export class QuoteService {
         validatedData,
         options,
       )
-      const inserted = result.filter((q) => q.id)
-      quotes.push(...inserted)
+      const insertedMap = new Map(result.map((q) => [q.content, q]))
+      quotes.push(...result)
       const quoteTags = new Map(
-        inserted.map((q) => [q.id, contentMap.get(q.content)?.tags ?? []]),
+        result.map((q) => [q.id, contentMap.get(q.content)?.tags ?? []]),
       )
-      await this.tagService.bulkSync(quoteTags, {
-        transaction: options.transaction,
-      })
+
+      if (quoteTags.size > 0) {
+        await this.tagService.bulkSync(quoteTags, {
+          transaction: options.transaction,
+        })
+      }
 
       skippedData.push(
-        ...result
-          .filter((q) => !q.id)
+        ...validatedData
+          .filter((q) => !insertedMap.has(q.content))
           .map(
             (q) =>
               ({
