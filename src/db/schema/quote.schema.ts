@@ -16,7 +16,7 @@ export const quotes = pgTable(
   {
     id: bigserial({ mode: 'number' }).primaryKey().notNull(),
     authorId: bigint({ mode: 'number' }).notNull(),
-    content: text(),
+    content: text().notNull(),
     createdAt: timestamp({ withTimezone: true, mode: 'string' })
       .default(sql`CURRENT_TIMESTAMP(6)`)
       .notNull(),

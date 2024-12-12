@@ -152,6 +152,7 @@ export class AuthorRepository {
         })),
       )
       .onConflictDoNothing({ target: authors.slug })
+      .returning()
   }
 
   async update(

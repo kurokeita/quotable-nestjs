@@ -1,27 +1,30 @@
 import { Injectable } from '@nestjs/common'
-import Transaction from 'sequelize/types/transaction'
-import { Quote } from '../quote/quote.entity'
-import { QuoteTag } from './quote_tag.entity'
+import { TagWithQuotesCount } from 'src/db/schema/tag.schema'
+import { Transaction } from '../../db/index'
+import { Quote } from '../../db/schema/quote.schema'
+import { QuoteTag } from '../../db/schema/tag.schema'
 import { IndexTagDto } from './tag.dto'
-import { Tag } from './tag.entity'
 import { TagRepository } from './tag.repository'
 
 @Injectable()
 export class TagService {
   constructor(private tagRepository: TagRepository) {}
 
-  async index(request: IndexTagDto): Promise<Tag[]> {
+  async index(request: IndexTagDto): Promise<TagWithQuotesCount[]> {
     return await this.tagRepository.index(request)
   }
 
   async sync(
     quote: Quote,
     tags: string[],
-    options: { t?: Transaction } = {},
+    options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
-    const upsertedTags = await this.tagRepository.upsertMultiple(tags, {
-      transaction: options.t,
-    })
+    const orginalQuoteTags = await this.tagRepository.getQuoteTags(
+      quote.id,
+      options,
+    )
+
+    const upsertedTags = await this.tagRepository.upsertMultiple(tags, options)
 
     const newTags = upsertedTags.filter((t) => t.id !== null)
     const existedTagNames = upsertedTags
@@ -29,12 +32,26 @@ export class TagService {
       .map((t) => t.name)
 
     const existedTags = await this.tagRepository.getByNames(existedTagNames, {
-      transaction: options.t,
+      transaction: options.transaction,
     })
 
-    await quote.$set('tags', [...newTags, ...existedTags], {
-      transaction: options.t,
+    const quoteTagsToBeInserted = [...newTags, ...existedTags].map((t) => ({
+      quoteId: quote.id,
+      tagId: t.id,
+    }))
+    const quoteTagsMap = new Map(
+      quoteTagsToBeInserted.map((t) => [`${t.quoteId}.${t.tagId}`, t]),
+    )
+
+    await this.tagRepository.bulkUpsertQuoteTags(quoteTagsToBeInserted, {
+      transaction: options.transaction,
     })
+
+    const quoteTagsToBeDeleted = orginalQuoteTags.filter(
+      (t) => !quoteTagsMap.has(`${t.quoteId}.${t.tagId}`),
+    )
+
+    await this.tagRepository.bulkDeleteQuoteTags(quoteTagsToBeDeleted, options)
 
     return quote
   }
@@ -43,16 +60,15 @@ export class TagService {
     quoteTags: Map<number, string[]>,
     options: { transaction?: Transaction } = {},
   ): Promise<void> {
-    const tags = Array.from(quoteTags.values()).flat()
+    const tags = [...new Set(Array.from(quoteTags.values()).flat())]
 
     const upsertedResult = await this.tagRepository.upsertMultiple(tags, {
       transaction: options.transaction,
     })
+    const upsertedMap = new Map(upsertedResult.map((t) => [t.name, t]))
 
     const newTags = upsertedResult.filter((t) => t.id)
-    const existedTagNames = upsertedResult
-      .filter((t) => !t.id)
-      .map((t) => t.name)
+    const existedTagNames = tags.filter((t) => !upsertedMap.has(t))
 
     const existedTags = await this.tagRepository.getByNames(existedTagNames, {
       transaction: options.transaction,
@@ -71,8 +87,11 @@ export class TagService {
       )
     })
 
-    await this.tagRepository.bulkUpsertQuoteTags(dataToSync, {
-      transaction: options.transaction,
-    })
+    await this.tagRepository.bulkUpsertQuoteTags(
+      dataToSync.filter((t) => t.tagId && t.quoteId),
+      {
+        transaction: options.transaction,
+      },
+    )
   }
 }

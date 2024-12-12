@@ -61,7 +61,7 @@ export class QuoteRepository {
     id: number,
     options: {
       findOrFail: true
-      withRelationships: false
+      withRelationships?: false
       transaction?: Transaction
     },
   ): Promise<Quote>
@@ -77,7 +77,7 @@ export class QuoteRepository {
     id: number,
     options?: {
       findOrFail?: false
-      withRelationships: false
+      withRelationships?: false
       transaction?: Transaction
     },
   ): Promise<Quote | null>
@@ -325,6 +325,7 @@ export class QuoteRepository {
         })),
       )
       .onConflictDoNothing({ target: quotes.content })
+      .returning()
   }
 
   async update(

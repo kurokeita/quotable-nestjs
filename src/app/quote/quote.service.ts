@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
-import { Sequelize } from 'sequelize-typescript'
-import Transaction from 'sequelize/types/transaction'
 import { getClient } from 'src/db'
 import PaginatedResponse from 'src/interfaces/paginated_response.interface'
+import { Transaction } from '../../db/index'
+import { getAuthorSlug } from '../../db/schema/author.schema'
 import { Quote, QuoteWithRelationships } from '../../db/schema/quote.schema'
 import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
 import { AuthorService } from '../author/author.service'
@@ -27,7 +27,6 @@ export class QuoteService {
     private readonly quoteRepository: QuoteRepository,
     private readonly tagService: TagService,
     private readonly authorService: AuthorService,
-    private sequelize: Sequelize,
   ) {}
 
   async getRandom(request: GetRandomQuotesDto): Promise<RandomQuoteResult> {
@@ -51,37 +50,19 @@ export class QuoteService {
   }
 
   async create(request: CreateQuoteDto): Promise<Quote> {
-    // const t = await this.sequelize.transaction()
-
-    // try {
-    //   const quote = await this.quoteRepository.create(request, {
-    //     t: t,
-    //   })
-
-    //   await this.tagService.sync(quote, request.tags, {
-    //     t: t,
-    //   })
-
-    //   const result = await this.legacyQuoteRepository.getById(quote.id, {
-    //     transaction: t,
-    //     findOrFail: true,
-    //   })
-
-    //   await t.commit()
-
-    //   return result
-    // } catch (e) {
-    //   await t.rollback()
-
-    //   throw e
-    // }
-
     return await getClient().transaction(async (t) => {
       const quote = await this.quoteRepository.create(request, {
         transaction: t,
       })
 
-      return quote
+      await this.tagService.sync(quote, request.tags, {
+        transaction: t,
+      })
+
+      return await this.quoteRepository.getById(quote.id, {
+        transaction: t,
+        findOrFail: true,
+      })
     })
   }
 
@@ -91,32 +72,15 @@ export class QuoteService {
         transaction: t,
       })
 
-      return quote
+      await this.tagService.sync(quote, request.tags, {
+        transaction: t,
+      })
+
+      return await this.quoteRepository.getById(quote.id, {
+        transaction: t,
+        findOrFail: true,
+      })
     })
-    // const t = await this.sequelize.transaction()
-
-    // try {
-    //   const quote = await this.legacyQuoteRepository.update(id, request, {
-    //     transaction: t,
-    //   })
-
-    //   await this.tagService.sync(quote, request.tags, {
-    //     t: t,
-    //   })
-
-    //   const result = await this.legacyQuoteRepository.getById(quote.id, {
-    //     transaction: t,
-    //     findOrFail: true,
-    //   })
-
-    //   await t.commit()
-
-    //   return result
-    // } catch (e) {
-    //   await t.rollback()
-
-    //   throw e
-    // }
   }
 
   async getById(id: number): Promise<QuoteWithRelationships> {
@@ -149,67 +113,70 @@ export class QuoteService {
     const quotes: Quote[] = []
     const skippedData: CreateQuoteDto[] = []
 
-    // for (const chunk of chunks) {
-    //   const authorsById = await this.authorService.getByIds(
-    //     chunk.map((q) => q.authorId as number).filter(Boolean),
-    //     { transaction: options.transaction },
-    //   )
-    //   const mappedIds = new Map(authorsById.map((a) => [a.id, a]))
+    for (const chunk of chunks) {
+      const authorsById = await this.authorService.getByIds(
+        chunk.map((q) => q.authorId as number).filter(Boolean),
+        { transaction: options.transaction },
+      )
+      const mappedIds = new Map(authorsById.map((a) => [a.id, a]))
 
-    //   const authorsBySlug = await this.authorService.getBySlugs(
-    //     chunk.map((q) => q.author as string).filter(Boolean),
-    //     { transaction: options.transaction },
-    //   )
-    //   const mappedSlugs = new Map(authorsBySlug.map((a) => [a.slug, a]))
+      const authorsBySlug = await this.authorService.getBySlugs(
+        chunk.map((q) => q.author as string).filter(Boolean),
+        { transaction: options.transaction },
+      )
+      const mappedSlugs = new Map(authorsBySlug.map((a) => [a.slug, a]))
 
-    //   const convertedChunk = chunk.map((q) => ({
-    //     ...q,
-    //     authorId:
-    //       q.authorId ?? mappedSlugs.get(Author.getSlug(q.author as string))?.id,
-    //   }))
-    //   const contentMap = new Map(convertedChunk.map((q) => [q.content, q]))
+      const convertedChunk = chunk.map((q) => ({
+        ...q,
+        authorId:
+          q.authorId ?? mappedSlugs.get(getAuthorSlug(q.author as string))?.id,
+      }))
+      const contentMap = new Map(convertedChunk.map((q) => [q.content, q]))
 
-    //   const validatedData = convertedChunk.filter(
-    //     (q) =>
-    //       (q.authorId && mappedIds.has(q.authorId)) ||
-    //       (q.author && mappedSlugs.has(Author.getSlug(q.author as string))),
-    //   )
+      const validatedData = convertedChunk.filter(
+        (q) =>
+          (q.authorId && mappedIds.has(q.authorId)) ||
+          (q.author && mappedSlugs.has(getAuthorSlug(q.author as string))),
+      )
 
-    //   skippedData.push(
-    //     ...convertedChunk.filter(
-    //       (q) =>
-    //         !(
-    //           (q.authorId && mappedIds.has(q.authorId)) ||
-    //           (q.author && mappedSlugs.has(Author.getSlug(q.author as string)))
-    //         ),
-    //     ),
-    //   )
+      skippedData.push(
+        ...convertedChunk.filter(
+          (q) =>
+            !(
+              (q.authorId && mappedIds.has(q.authorId)) ||
+              (q.author && mappedSlugs.has(getAuthorSlug(q.author as string)))
+            ),
+        ),
+      )
 
-    //   const result = await this.quoteRepository.bulkUpsert(
-    //     validatedData,
-    //     options,
-    //   )
-    //   const inserted = result.filter((q) => q.id)
-    //   quotes.push(...inserted)
-    //   const quoteTags = new Map(
-    //     inserted.map((q) => [q.id, contentMap.get(q.content)?.tags ?? []]),
-    //   )
-    //   await this.tagService.bulkSync(quoteTags, {
-    //     transaction: options.transaction,
-    //   })
+      const result = await this.quoteRepository.bulkUpsert(
+        validatedData,
+        options,
+      )
+      const insertedMap = new Map(result.map((q) => [q.content, q]))
+      quotes.push(...result)
+      const quoteTags = new Map(
+        result.map((q) => [q.id, contentMap.get(q.content)?.tags ?? []]),
+      )
 
-    //   skippedData.push(
-    //     ...result
-    //       .filter((q) => !q.id)
-    //       .map(
-    //         (q) =>
-    //           ({
-    //             content: q.content,
-    //             authorId: q.authorId,
-    //           }) as CreateQuoteDto,
-    //       ),
-    //   )
-    // }
+      if (quoteTags.size > 0) {
+        await this.tagService.bulkSync(quoteTags, {
+          transaction: options.transaction,
+        })
+      }
+
+      skippedData.push(
+        ...validatedData
+          .filter((q) => !insertedMap.has(q.content))
+          .map(
+            (q) =>
+              ({
+                content: q.content,
+                authorId: q.authorId,
+              }) as CreateQuoteDto,
+          ),
+      )
+    }
 
     return {
       input: input.length,

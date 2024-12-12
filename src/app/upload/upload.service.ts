@@ -1,21 +1,18 @@
 import { Injectable } from '@nestjs/common'
 import { plainToInstance } from 'class-transformer'
-import { Sequelize } from 'sequelize-typescript'
+import { getClient } from 'src/db'
 import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
 import { CreateAuthorDto } from '../author/author.dto'
 import { AuthorService } from '../author/author.service'
 import { CreateQuoteDto } from '../quote/quote.dto'
 import { QuoteService } from '../quote/quote.service'
-import { TagService } from '../tag/tag.service'
 import { UploadContentDto } from './upload.dto'
 
 @Injectable()
 export class UploadService {
   constructor(
-    private readonly sequelize: Sequelize,
     private readonly authorService: AuthorService,
     private readonly quoteService: QuoteService,
-    private readonly tagService: TagService,
   ) {}
 
   async upload(file: Express.Multer.File): Promise<{
@@ -42,15 +39,14 @@ export class UploadService {
       }
     }
 
-    const t = await this.sequelize.transaction()
+    return await getClient().transaction(async (t) => {
+      const createAuthorResult = await this.authorService.bulkCreate(
+        authorsInput,
+        {
+          transaction: t,
+        },
+      )
 
-    try {
-      // const createAuthorResult = await this.authorService.bulkCreate(
-      //   authorsInput,
-      //   {
-      //     transaction: t,
-      //   },
-      // )
       const createQuoteResult = await this.quoteService.bulkCreate(
         quotesInput,
         {
@@ -58,20 +54,10 @@ export class UploadService {
         },
       )
 
-      await t.commit()
-
       return {
-        authors: {
-          created: 0,
-          skipped: 0,
-          skippedData: [],
-          input: originalCount.authors,
-        },
+        authors: { ...createAuthorResult, input: originalCount.authors },
         quotes: { ...createQuoteResult, input: originalCount.quotes },
       }
-    } catch (e) {
-      await t.rollback()
-      throw e
-    }
+    })
   }
 }

@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common'
-import { InjectModel } from '@nestjs/sequelize'
-import { Op } from 'sequelize'
-import Transaction from 'sequelize/types/transaction'
-import { QuoteTag } from './quote_tag.entity'
+import { and, eq, getTableColumns, inArray, isNull, or, sql } from 'drizzle-orm'
+import { getClient, Transaction } from '../../db/index'
+import { quotes } from '../../db/schema/quote.schema'
+import {
+  QuoteTag,
+  quoteTags,
+  Tag,
+  tags,
+  TagWithQuotesCount,
+} from '../../db/schema/tag.schema'
 import { IndexTagDto } from './tag.dto'
-import { Tag } from './tag.entity'
 
 export enum TagSortByEnum {
   NAME = 'name',
@@ -18,61 +23,83 @@ export class TagRepository {
   public DEFAULT_SORT_BY = TagSortByEnum.DATE_CREATED
   public DEFAULT_ORDER = 'ASC'
 
-  constructor(
-    @InjectModel(Tag)
-    private readonly tagModel: typeof Tag,
-    @InjectModel(QuoteTag)
-    private readonly quoteTagModel: typeof QuoteTag,
-  ) {}
-
   async getByNames(
     names: string[],
     options: { transaction?: Transaction } = {},
   ): Promise<Tag[]> {
-    return (
-      (await this.tagModel.findAll({
-        where: {
-          name: {
-            [Op.in]: names,
-          },
-        },
-        transaction: options.transaction,
-      })) ?? []
-    )
+    return await getClient(options.transaction)
+      .select()
+      .from(tags)
+      .where(and(inArray(tags.name, names), isNull(tags.deletedAt)))
+  }
+
+  async index(
+    input: IndexTagDto,
+    options: { transaction?: Transaction } = {},
+  ): Promise<TagWithQuotesCount[]> {
+    const { sortBy = this.DEFAULT_SORT_BY, order = this.DEFAULT_ORDER } = input
+
+    return await getClient(options.transaction)
+      .select({
+        ...getTableColumns(tags),
+        quotesCount: sql<number>`count(${quotes.id})`
+          .mapWith(Number)
+          .as('quotesCount'),
+      })
+      .from(quoteTags)
+      .innerJoin(tags, eq(tags.id, quoteTags.tagId))
+      .innerJoin(quotes, eq(quotes.id, quoteTags.quoteId))
+      .where(and(isNull(tags.deletedAt), isNull(quotes.deletedAt)))
+      .groupBy(tags.id)
+      .orderBy(sql`${sql.identifier(sortBy)} ${sql.raw(order)}`)
   }
 
   async upsertMultiple(
     names: string[],
     options: { transaction?: Transaction } = {},
   ): Promise<Tag[]> {
-    return await this.tagModel.bulkCreate(
-      names.map((name) => ({ name })),
-      {
-        transaction: options.transaction,
-        ignoreDuplicates: true,
-      },
-    )
-  }
-
-  async index(
-    input: IndexTagDto,
-    options: { transaction?: Transaction } = {},
-  ): Promise<Tag[]> {
-    const { sortBy = this.DEFAULT_SORT_BY, order = this.DEFAULT_ORDER } = input
-
-    return await this.tagModel.scope('withQuotesCount').findAll({
-      order: [[sortBy, order]],
-      transaction: options.transaction,
-    })
+    return await getClient(options.transaction)
+      .insert(tags)
+      .values(names.filter(Boolean).map((name) => ({ name: name })))
+      .onConflictDoNothing({ target: tags.name })
+      .returning()
   }
 
   async bulkUpsertQuoteTags(
-    quoteTags: QuoteTag[],
+    data: QuoteTag[],
     options: { transaction?: Transaction } = {},
   ): Promise<void> {
-    await this.quoteTagModel.bulkCreate(quoteTags, {
-      transaction: options.transaction,
-      ignoreDuplicates: true,
-    })
+    await getClient(options.transaction)
+      .insert(quoteTags)
+      .values(data)
+      .onConflictDoNothing({
+        target: [quoteTags.quoteId, quoteTags.tagId],
+      })
+      .returning()
+  }
+
+  async bulkDeleteQuoteTags(
+    data: QuoteTag[],
+    options: { transaction?: Transaction } = {},
+  ): Promise<void> {
+    await getClient(options.transaction)
+      .delete(quoteTags)
+      .where(
+        or(
+          ...data.map((d) =>
+            and(eq(quoteTags.quoteId, d.quoteId), eq(quoteTags.tagId, d.tagId)),
+          ),
+        ),
+      )
+  }
+
+  async getQuoteTags(
+    quoteId: number,
+    options: { transaction?: Transaction },
+  ): Promise<QuoteTag[]> {
+    return await getClient(options.transaction)
+      .select()
+      .from(quoteTags)
+      .where(eq(quoteTags.quoteId, quoteId))
   }
 }

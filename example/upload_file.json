@@ -1,7 +1,7 @@
 {
     "authors": [
         {
-            "name": "author name",
+            "name": "Alice Walker",
             "bio": "author bio",
             "description": "author description",
             "link": "author link"
@@ -9,11 +9,43 @@
     ],
     "quotes": [
         {
-            "author": "author name",
-            "content": "quote content",
+            "content": "In the depth of winter, I finally learned that there was within me an invincible summer.",
+            "author": "Alice Walker",
             "tags": [
-                "tag 1",
-                "tag 2"
+                "Famous Quotes",
+                "Inspirational"
+            ]
+        },
+        {
+            "content": "To follow, without halt, one aim: There is the secret of success.",
+            "author": "Alice Walker",
+            "tags": [
+                "Success"
+            ]
+        },
+        {
+            "content": "Focusing your life solely on making a buck shows a poverty of ambition. It asks too little of yourself. And it will leave you unfulfilled.",
+            "author": "Alice Walker",
+            "tags": [
+                "Success",
+                "Famous Quotes"
+            ]
+        },
+        {
+            "content": "It is never too late to be what you might have been.",
+            "author": "Alice Walker",
+            "tags": [
+                "Famous Quotes",
+                "Success",
+                "Wisdom"
+            ]
+        },
+        {
+            "content": "Pick battles big enough to matter, small enough to win.",
+            "author": "Alice Walker",
+            "tags": [
+                "Famous Quotes",
+                "Wisdom"
             ]
         }
     ]
