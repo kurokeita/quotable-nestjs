@@ -43,6 +43,6 @@ $ yarn migrate:fresh
 A few resources that will help you get started:
 
 - [NestJS docs](https://docs.nestjs.com/)
-- [Sequelize](https://sequelize.org/)
+- [Drizzle](https://orm.drizzle.team/)
 - [Vercel](https://vercel.com/): free serverless platform
 - [Supabase](https://supabase.com/): free PostgreSQL database

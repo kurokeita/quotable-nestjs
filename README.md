@@ -6,7 +6,7 @@ Quotable is a free, open-source quotations API. It was built to support teachers
 
 - RESTful API interface.
 - Using PostgreSQL.
-- Built with NestJS and Sequelize.
+- Built with NestJS and Drizzle.
 - Fully documented API with Swagger.
 - Docker support.
 
