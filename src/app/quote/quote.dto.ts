@@ -29,54 +29,54 @@ export class IndexQuotesDto {
       _.toUpper(_.snakeCase(value)) as keyof typeof QuoteSortByEnum
     ]
   })
-  sortBy: QuoteSortByEnum
+  sortBy?: QuoteSortByEnum
 
   @IsEnum(OrderEnum)
   @IsOptional()
   @ApiPropertyOptional({ enum: Object.values(OrderEnum) })
-  order: OrderEnum
+  order?: OrderEnum
 
   @IsIn(PagingLimitEnum)
   @IsOptional()
   @Type(() => Number)
   @ApiPropertyOptional({ enum: PagingLimitEnum })
-  limit: number
+  limit?: number
 
   @IsInt()
   @Min(0)
   @IsOptional()
   @Type(() => Number)
   @ApiPropertyOptional({ minimum: 0 })
-  page: number
+  page?: number
 
   @IsString()
   @IsOptional()
   @ApiPropertyOptional()
-  author: string
+  author?: string
 
   @IsInt()
   @Min(0)
   @IsOptional()
   @Type(() => Number)
   @ApiPropertyOptional({ minimum: 0 })
-  minLength: number
+  minLength?: number
 
   @IsInt()
   @Min(0)
   @IsOptional()
   @Type(() => Number)
   @ApiPropertyOptional({ minimum: 0 })
-  maxLength: number
+  maxLength?: number
 
   @IsString()
   @IsOptional()
   @ApiPropertyOptional()
-  query: string
+  query?: string
 
   @IsString()
   @IsOptional()
   @ApiPropertyOptional()
-  tags: string
+  tags?: string
 }
 
 export class GetRandomQuotesDto extends OmitType(IndexQuotesDto, [

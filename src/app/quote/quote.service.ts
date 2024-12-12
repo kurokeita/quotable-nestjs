@@ -16,8 +16,8 @@ import {
 import { QuoteRepository } from './quote.repository'
 
 type RandomQuoteResult =
-  | { isMultiple: true; data: Quote[] }
-  | { isMultiple: false; data: Quote | null }
+  | { isMultiple: true; data: QuoteWithRelationships[] }
+  | { isMultiple: false; data: QuoteWithRelationships | null }
 
 @Injectable()
 export class QuoteService {
@@ -33,13 +33,16 @@ export class QuoteService {
     if (request.limit) {
       return {
         isMultiple: true,
-        data: await this.quoteRepository.randomQuotes(request),
+        data: await this.quoteRepository.random({
+          ...request,
+          limit: request.limit as number,
+        }),
       }
     }
 
     return {
       isMultiple: false,
-      data: await this.quoteRepository.random(request),
+      data: await this.quoteRepository.random({ ...request, limit: undefined }),
     }
   }
 
