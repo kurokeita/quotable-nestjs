@@ -4,7 +4,7 @@ import {
   HealthCheckService,
   MemoryHealthIndicator,
 } from '@nestjs/terminus'
-import { DbHealthIndicator } from 'src/db/db.health'
+import { DbHealthIndicator } from '../../db/db.health'
 
 @Controller('api/health')
 export class HealthController {

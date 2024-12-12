@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common'
-import { TagWithQuotesCount } from 'src/db/schema/tag.schema'
 import { Transaction } from '../../db/index'
 import { Quote } from '../../db/schema/quote.schema'
-import { QuoteTag } from '../../db/schema/tag.schema'
+import { QuoteTag, TagWithQuotesCount } from '../../db/schema/tag.schema'
 import { IndexTagDto } from './tag.dto'
 import { TagRepository } from './tag.repository'
 
