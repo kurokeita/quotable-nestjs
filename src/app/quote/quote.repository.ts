@@ -1,5 +1,14 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common'
-import { and, eq, exists, inArray, isNull, SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  exists,
+  getTableName,
+  inArray,
+  isNull,
+  SQL,
+  sql,
+} from 'drizzle-orm'
 import { getClient, Transaction } from '../../db/index'
 import { Author, authors, getAuthorSlug } from '../../db/schema/author.schema'
 import {
@@ -151,38 +160,17 @@ export class QuoteRepository {
     return result.map((q) => this.transform(q))
   }
 
-  async random(input: GetRandomQuotesDto): Promise<QuoteWithRelationships> {
-    // Build a sub query to filter quotes with the given filters and get a random one
-    const sq = getClient()
-      .$with('sq')
-      .as(
-        getClient()
-          .select({ id: quotes.id })
-          .from(quotes)
-          .orderBy(sql`RANDOM()`)
-          .where(and(isNull(quotes.deletedAt), ...this.createFilters(input)))
-          .limit(1),
-      )
-
-    // The main query to get the quote with relationships
-    const result = await getClient()
-      .with(sq)
-      .select()
-      .from(quotes)
-      .innerJoin(authors, eq(authors.id, quotes.authorId))
-      .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
-      .innerJoin(tags, eq(tags.id, quoteTags.tagId))
-      .innerJoin(sq, eq(sq.id, quotes.id))
-      .where(eq(quotes.id, sq.id))
-
-    return this.transformQuotes(result)[0]
-  }
-
-  async randomQuotes(
+  async random(
+    input: GetRandomQuotesDto & { limit: undefined | 1 },
+  ): Promise<QuoteWithRelationships>
+  async random(
+    input: GetRandomQuotesDto & { limit: number },
+  ): Promise<QuoteWithRelationships[]>
+  async random(
     input: GetRandomQuotesDto,
-  ): Promise<QuoteWithRelationships[]> {
+  ): Promise<QuoteWithRelationships[] | QuoteWithRelationships> {
     const {
-      limit = this.DEFAULT_LIMIT,
+      limit = 1,
       sortBy = this.DEFAULT_SORT_BY,
       order = this.DEFAULT_ORDER,
     } = input
@@ -200,7 +188,7 @@ export class QuoteRepository {
       )
 
     // The main query to get the quote with relationships
-    const result = await getClient()
+    const data = await getClient()
       .with(sq)
       .select()
       .from(quotes)
@@ -208,10 +196,14 @@ export class QuoteRepository {
       .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
       .innerJoin(tags, eq(tags.id, quoteTags.tagId))
       .innerJoin(sq, eq(sq.id, quotes.id))
-      .orderBy(sql`"authors".${sql.identifier(sortBy)} ${sql.raw(order)}`)
       .where(eq(quotes.id, sq.id))
+      .orderBy(
+        sql`${sql.raw(getTableName(quotes))}.${sql.identifier(sortBy)} ${sql.raw(order)}`,
+      )
 
-    return this.transformQuotes(result)
+    const result = this.transformQuotes(data)
+
+    return limit === 1 ? result[0] : result
   }
 
   async index(
@@ -255,7 +247,9 @@ export class QuoteRepository {
         .innerJoin(sq, eq(sq.id, quotes.id))
         .where(eq(quotes.id, sq.id))
         .offset(limit * page)
-        .orderBy(sql`"quotes".${sql.identifier(sortBy)} ${sql.raw(order)}`),
+        .orderBy(
+          sql`"${sql.raw(getTableName(quotes))}".${sql.identifier(sortBy)} ${sql.raw(order)}`,
+        ),
     ])
 
     const count = countResult[0]?.count || 0
