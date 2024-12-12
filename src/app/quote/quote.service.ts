@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common'
-import { getClient } from 'src/db'
-import PaginatedResponse from 'src/interfaces/paginated_response.interface'
+import { getClient } from '../../db'
 import { Transaction } from '../../db/index'
 import { getAuthorSlug } from '../../db/schema/author.schema'
 import { Quote, QuoteWithRelationships } from '../../db/schema/quote.schema'
 import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
+import PaginatedResponse from '../../interfaces/paginated_response.interface'
 import { AuthorService } from '../author/author.service'
 import { TagService } from '../tag/tag.service'
 import {

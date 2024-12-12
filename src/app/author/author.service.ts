@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
-import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
 import { Transaction } from '../../db'
 import { Author } from '../../db/schema/author.schema'
+import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
 import { AuthorRepository } from './author.repository'
 
