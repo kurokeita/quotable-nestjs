@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
-import Transaction from 'sequelize/types/transaction'
 import { BulkCreateResult } from 'src/interfaces/bulk_create_result.interface'
+import { Transaction } from '../../db'
+import { Author } from '../../db/schema/author.schema'
 import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
-import { Author } from './author.entity'
 import { AuthorRepository } from './author.repository'
 
 @Injectable()
@@ -24,7 +24,9 @@ export class AuthorService {
   }
 
   async getBySlug(slug: string) {
-    return await this.authorRepository.getBySlug(slug, { findOrFail: true })
+    return await this.authorRepository.getBySlug(slug, {
+      findOrFail: true,
+    })
   }
 
   async getById(id: number) {
