@@ -208,7 +208,7 @@ export class QuoteRepository {
       .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
       .innerJoin(tags, eq(tags.id, quoteTags.tagId))
       .innerJoin(sq, eq(sq.id, quotes.id))
-      .orderBy(sql`${sql.identifier(sortBy)} ${sql.raw(order)}`)
+      .orderBy(sql`"authors".${sql.identifier(sortBy)} ${sql.raw(order)}`)
       .where(eq(quotes.id, sq.id))
 
     return this.transformQuotes(result)
