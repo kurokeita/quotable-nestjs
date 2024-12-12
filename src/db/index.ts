@@ -5,13 +5,14 @@ import { drizzle, PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as authors from './schema/author.schema'
 import * as quotes from './schema/quote.schema'
+import * as relations from './schema/relations'
 import * as tags from './schema/tag.schema'
 
 dotenv.config()
 
 const client = postgres(process.env.DATABASE_URL!, { prepare: false })
 
-export const schema = { ...authors, ...quotes, ...tags }
+export const schema = { ...authors, ...quotes, ...tags, ...relations }
 
 export const db = drizzle({
   client,
@@ -25,4 +26,4 @@ export type Transaction = PgTransaction<
   ExtractTablesWithRelations<typeof schema>
 >
 
-export const getClient = (t: Transaction | undefined) => t || db
+export const getClient = (t: Transaction | undefined = undefined) => t || db

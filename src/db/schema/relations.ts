@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm/relations'
-import { authors } from './schema/author.schema'
-import { quotes } from './schema/quote.schema'
-import { quoteTags, tags } from './schema/tag.schema'
+import { authors } from './author.schema'
+import { quotes } from './quote.schema'
+import { quoteTags, tags } from './tag.schema'
 
 export const quotesRelations = relations(quotes, ({ one, many }) => ({
   author: one(authors, {

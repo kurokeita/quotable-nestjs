@@ -45,12 +45,12 @@ export class UploadService {
     const t = await this.sequelize.transaction()
 
     try {
-      const createAuthorResult = await this.authorService.bulkCreate(
-        authorsInput,
-        {
-          transaction: t,
-        },
-      )
+      // const createAuthorResult = await this.authorService.bulkCreate(
+      //   authorsInput,
+      //   {
+      //     transaction: t,
+      //   },
+      // )
       const createQuoteResult = await this.quoteService.bulkCreate(
         quotesInput,
         {
@@ -61,7 +61,12 @@ export class UploadService {
       await t.commit()
 
       return {
-        authors: { ...createAuthorResult, input: originalCount.authors },
+        authors: {
+          created: 0,
+          skipped: 0,
+          skippedData: [],
+          input: originalCount.authors,
+        },
         quotes: { ...createQuoteResult, input: originalCount.quotes },
       }
     } catch (e) {

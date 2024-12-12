@@ -8,7 +8,8 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
-import { authors } from './author.schema'
+import { Author, authors } from './author.schema'
+import { Tag } from './tag.schema'
 
 export const quotes = pgTable(
   'quotes',
@@ -36,3 +37,10 @@ export const quotes = pgTable(
     }),
   ],
 )
+
+export type Quote = typeof quotes.$inferSelect
+export type NewQuote = typeof quotes.$inferInsert
+export type QuoteWithRelationships = Quote & {
+  author?: Author
+  tags?: Tag[]
+}

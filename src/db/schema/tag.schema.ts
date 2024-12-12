@@ -55,3 +55,8 @@ export const quoteTags = pgTable(
     }),
   ],
 )
+
+export type Tag = typeof tags.$inferSelect
+export type NewTag = typeof tags.$inferInsert
+export type QuoteTag = typeof quoteTags.$inferSelect
+export type NewQuoteTag = typeof quoteTags.$inferInsert

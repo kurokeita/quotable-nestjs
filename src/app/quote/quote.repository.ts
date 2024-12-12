@@ -1,19 +1,23 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common'
-import { InjectModel } from '@nestjs/sequelize'
-import { FindOptions, Includeable, Op, Transaction } from 'sequelize'
-import { Sequelize } from 'sequelize-typescript'
+import { and, eq, exists, inArray, isNull, SQL, sql } from 'drizzle-orm'
+import { getClient, Transaction } from '../../db/index'
+import { Author, authors, getAuthorSlug } from '../../db/schema/author.schema'
+import {
+  NewQuote,
+  Quote,
+  quotes,
+  QuoteWithRelationships,
+} from '../../db/schema/quote.schema'
+import { QuoteTag, quoteTags, Tag, tags } from '../../db/schema/tag.schema'
 import { OrderEnum } from '../../enums/order.enum'
 import PaginatedResponse from '../../interfaces/paginated_response.interface'
-import { Author } from '../author/author.entity'
 import { AuthorRepository } from '../author/author.repository'
-import { Tag } from '../tag/tag.entity'
 import {
   CreateQuoteDto,
   GetRandomQuotesDto,
   IndexQuotesDto,
   UpdateQuoteDto,
 } from './quote.dto'
-import { Quote } from './quote.entity'
 
 interface QuoteFilters {
   author?: string
@@ -21,6 +25,13 @@ interface QuoteFilters {
   minLength?: number
   maxLength?: number
   tags?: string
+}
+
+interface QuoteFindManyResult {
+  quotes: Quote
+  authors: Author
+  quote_tags: QuoteTag
+  tags: Tag
 }
 
 export enum QuoteSortByEnum {
@@ -36,37 +47,77 @@ export class QuoteRepository {
   public DEFAULT_LIMIT = 10
   public DEFAULT_PAGE = 0
 
-  constructor(
-    @InjectModel(Quote)
-    private readonly quoteModel: typeof Quote,
-    private readonly authorRepository: AuthorRepository,
-    private readonly sequelize: Sequelize,
-  ) {}
+  constructor(private readonly authorRepository: AuthorRepository) {}
 
   async getById(
     id: number,
-    options: { findOrFail: true; transaction?: Transaction },
+    options: {
+      findOrFail: true
+      withRelationships: true
+      transaction?: Transaction
+    },
+  ): Promise<QuoteWithRelationships>
+  async getById(
+    id: number,
+    options: {
+      findOrFail: true
+      withRelationships: false
+      transaction?: Transaction
+    },
   ): Promise<Quote>
-
   async getById(
     id: number,
-    options?: { findOrFail?: false; transaction?: Transaction },
+    options?: {
+      findOrFail?: false
+      withRelationships: true
+      transaction?: Transaction
+    },
+  ): Promise<QuoteWithRelationships | null>
+  async getById(
+    id: number,
+    options?: {
+      findOrFail?: false
+      withRelationships: false
+      transaction?: Transaction
+    },
   ): Promise<Quote | null>
   async getById(
     id: number,
-    options: { findOrFail?: boolean; transaction?: Transaction } = {},
-  ): Promise<Quote | null> {
-    const quote = await this.quoteModel.findOne({
-      where: { id },
-      include: [Author, Tag],
-      transaction: options.transaction,
+    options: {
+      findOrFail?: boolean
+      withRelationships?: boolean
+      transaction?: Transaction
+    } = {},
+  ): Promise<QuoteWithRelationships | Quote | null> {
+    const {
+      findOrFail = false,
+      withRelationships = true,
+      transaction = undefined,
+    } = options
+
+    const quote = await getClient(transaction).query.quotes.findFirst({
+      where: and(eq(quotes.id, id), isNull(quotes.deletedAt)),
+      with: withRelationships
+        ? {
+            author: true,
+            quoteTags: {
+              columns: {
+                tagId: false,
+                quoteId: false,
+              },
+              with: {
+                tag: true,
+              },
+            },
+          }
+        : undefined,
     })
 
-    if (options.findOrFail && !quote) {
+    if (findOrFail && !quote) {
       throw new UnprocessableEntityException(`Quote with ID ${id} not found`)
     }
 
-    return quote
+    return quote ? this.transform(quote) : null
   }
 
   async getByIds(
@@ -76,54 +127,96 @@ export class QuoteRepository {
       order?: OrderEnum
       transaction?: Transaction
     } = {},
-  ): Promise<Quote[]> {
+  ): Promise<QuoteWithRelationships[]> {
     const { sortBy = this.DEFAULT_SORT_BY, order = this.DEFAULT_ORDER } =
       options
 
-    return this.quoteModel.findAll({
-      where: { id: { [Op.in]: ids } },
-      include: [Author, Tag],
-      transaction: options.transaction,
-      order: [[sortBy, order]],
+    const result = await getClient(options.transaction).query.quotes.findMany({
+      where: and(inArray(quotes.id, ids), isNull(quotes.deletedAt)),
+      with: {
+        author: true,
+        quoteTags: {
+          columns: {
+            tagId: false,
+            quoteId: false,
+          },
+          with: {
+            tag: true,
+          },
+        },
+      },
+      orderBy: sql`${sql.identifier(sortBy)} ${sql.raw(order)}`,
     })
+
+    return result.map((q) => this.transform(q))
   }
 
-  async random(input: GetRandomQuotesDto): Promise<Quote | null> {
-    const quote = await this.quoteModel.findOne({
-      ...this.createFilter(input),
-      order: Sequelize.fn('RANDOM'),
-    })
+  async random(input: GetRandomQuotesDto): Promise<QuoteWithRelationships> {
+    // Build a sub query to filter quotes with the given filters and get a random one
+    const sq = getClient()
+      .$with('sq')
+      .as(
+        getClient()
+          .select({ id: quotes.id })
+          .from(quotes)
+          .orderBy(sql`RANDOM()`)
+          .where(and(isNull(quotes.deletedAt), ...this.createFilters(input)))
+          .limit(1),
+      )
 
-    // Why this? Because of a bug in Sequelize where `LIMIT` would break the query with top level complex clauses
-    // Reference: https://github.com/sequelize/sequelize/issues/12971
-    return quote ? await this.getById(quote.id, { findOrFail: true }) : null
+    // The main query to get the quote with relationships
+    const result = await getClient()
+      .with(sq)
+      .select()
+      .from(quotes)
+      .innerJoin(authors, eq(authors.id, quotes.authorId))
+      .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
+      .innerJoin(tags, eq(tags.id, quoteTags.tagId))
+      .innerJoin(sq, eq(sq.id, quotes.id))
+      .where(eq(quotes.id, sq.id))
+
+    return this.transformQuotes(result)[0]
   }
 
-  async randomQuotes(input: GetRandomQuotesDto): Promise<Quote[]> {
+  async randomQuotes(
+    input: GetRandomQuotesDto,
+  ): Promise<QuoteWithRelationships[]> {
     const {
       limit = this.DEFAULT_LIMIT,
       sortBy = this.DEFAULT_SORT_BY,
       order = this.DEFAULT_ORDER,
     } = input
 
-    const quotes = await this.quoteModel.findAll({
-      ...this.createFilter(input),
-      limit: limit,
-      order: [Sequelize.fn('RANDOM'), [sortBy, order]],
-    })
+    // Build a sub query to filter quotes with the given filters and get a random one
+    const sq = getClient()
+      .$with('sq')
+      .as(
+        getClient()
+          .select({ id: quotes.id })
+          .from(quotes)
+          .orderBy(sql`RANDOM()`)
+          .where(and(isNull(quotes.deletedAt), ...this.createFilters(input)))
+          .limit(limit),
+      )
 
-    // Why this? Because of a bug in Sequelize where `LIMIT` would break the query with top level complex clauses
-    // Reference: https://github.com/sequelize/sequelize/issues/12971
-    return await this.getByIds(
-      quotes.map((q) => q.id),
-      {
-        sortBy: sortBy,
-        order: order,
-      },
-    )
+    // The main query to get the quote with relationships
+    const result = await getClient()
+      .with(sq)
+      .select()
+      .from(quotes)
+      .innerJoin(authors, eq(authors.id, quotes.authorId))
+      .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
+      .innerJoin(tags, eq(tags.id, quoteTags.tagId))
+      .innerJoin(sq, eq(sq.id, quotes.id))
+      .orderBy(sql`${sql.identifier(sortBy)} ${sql.raw(order)}`)
+      .where(eq(quotes.id, sq.id))
+
+    return this.transformQuotes(result)
   }
 
-  async index(input: IndexQuotesDto): Promise<PaginatedResponse<Quote>> {
+  async index(
+    input: IndexQuotesDto,
+  ): Promise<PaginatedResponse<QuoteWithRelationships>> {
     const {
       limit = this.DEFAULT_LIMIT,
       page = this.DEFAULT_PAGE,
@@ -131,25 +224,45 @@ export class QuoteRepository {
       order = this.DEFAULT_ORDER,
     } = input
 
-    // Can not use the `findAndCountAll` because `GROUP BY` will mess up the count query
-    const [count, rows] = await Promise.all([
-      this.quoteModel.unscoped().count({
-        ...this.createFilter(input),
-        distinct: true,
-        col: 'id',
-      }),
-      this.quoteModel.findAll({
-        ...this.createFilter(input),
-        limit,
-        offset: limit * page,
-        order: [[sortBy, order]],
-      }),
+    const filter = this.createFilters(input)
+    const sq = getClient()
+      .$with('sq')
+      .as(
+        getClient()
+          .select({ id: quotes.id })
+          .from(quotes)
+          .where(and(isNull(quotes.deletedAt), ...filter))
+          .limit(limit),
+      )
+
+    const [countResult, selectResult] = await Promise.all([
+      getClient()
+        .select({
+          count: sql<number>`count(distinct ${quotes.id})`.mapWith(Number),
+        })
+        .from(quotes)
+        .innerJoin(authors, eq(authors.id, quotes.authorId))
+        .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
+        .innerJoin(tags, eq(tags.id, quoteTags.tagId))
+        .where(and(isNull(quotes.deletedAt), ...this.createFilters(input))),
+      getClient()
+        .with(sq)
+        .select()
+        .from(quotes)
+        .innerJoin(authors, eq(authors.id, quotes.authorId))
+        .innerJoin(quoteTags, eq(quoteTags.quoteId, quotes.id))
+        .innerJoin(tags, eq(tags.id, quoteTags.tagId))
+        .innerJoin(sq, eq(sq.id, quotes.id))
+        .where(eq(quotes.id, sq.id))
+        .offset(limit * page)
+        .orderBy(sql`"quotes".${sql.identifier(sortBy)} ${sql.raw(order)}`),
     ])
 
+    const count = countResult[0]?.count || 0
     const lastPage = Math.max(0, Math.ceil(count / limit) - 1)
 
     return {
-      data: rows,
+      data: this.transformQuotes(selectResult),
       metadata: {
         total: count,
         page,
@@ -157,12 +270,12 @@ export class QuoteRepository {
         hasNextPage: page < lastPage,
         hasPreviousPage: page > 0,
       },
-    } as PaginatedResponse<Quote>
+    } as PaginatedResponse<QuoteWithRelationships>
   }
 
   async create(
     input: CreateQuoteDto,
-    options: { t?: Transaction } = {},
+    options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
     let authorId: number
 
@@ -186,29 +299,32 @@ export class QuoteRepository {
       authorId = author.id
     }
 
-    return await this.quoteModel.create<Quote>(
-      {
-        content: input.content,
-        authorId: authorId,
-      },
-      {
-        include: [Author, Tag],
-        transaction: options.t,
-      },
-    )
+    const data: NewQuote = {
+      content: input.content,
+      authorId: authorId,
+    }
+
+    const inserted = await getClient(options.transaction)
+      .insert(quotes)
+      .values(data)
+      .returning()
+
+    return inserted[0]
   }
 
   async bulkUpsert(
     input: CreateQuoteDto[],
     options: { transaction: Transaction },
   ): Promise<Quote[]> {
-    return await this.quoteModel.bulkCreate(
-      input.map((i) => ({
-        content: i.content,
-        authorId: i.authorId,
-      })),
-      { transaction: options.transaction, ignoreDuplicates: true },
-    )
+    return await getClient(options.transaction)
+      .insert(quotes)
+      .values(
+        input.map((i) => ({
+          content: i.content,
+          authorId: i.authorId as number,
+        })),
+      )
+      .onConflictDoNothing({ target: quotes.content })
   }
 
   async update(
@@ -218,63 +334,55 @@ export class QuoteRepository {
   ): Promise<Quote> {
     const quote = await this.getById(id, {
       findOrFail: true,
+      withRelationships: false,
       transaction: options.transaction,
     })
 
-    await quote.update(
-      {
-        content: input.content ?? quote.content,
-      },
-      {
-        transaction: options.transaction,
-      },
-    )
+    const result = await getClient(options.transaction)
+      .update(quotes)
+      .set({ content: input.content ?? quote.content })
+      .where(eq(quotes.id, id))
+      .returning()
 
-    return quote
+    return result[0]
   }
 
   async delete(
     id: number,
     options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
-    const quote = await this.getById(id, {
+    await this.getById(id, {
       findOrFail: true,
+      withRelationships: false,
       transaction: options.transaction,
     })
 
-    await quote.$remove('tags', quote.tags, {
-      transaction: options.transaction,
-    })
+    const result = await getClient()
+      .update(quotes)
+      .set({ deletedAt: sql`now()` })
+      .where(eq(quotes.id, id))
+      .returning()
 
-    await quote.destroy({ transaction: options.transaction })
-
-    return quote
+    return result[0]
   }
 
-  private createFilter(params: QuoteFilters): FindOptions<Quote> {
+  private createFilters(params: QuoteFilters) {
     const { author, query, minLength, maxLength, tags } = params
 
-    const tagFilters = this.filterByTags(tags)
-    const authorFilter = this.filterByAuthor(author)
-    const contentFilters = this.filterByContent({ query, minLength, maxLength })
-
-    return {
-      where: contentFilters.where,
-      include: [
-        ...(tagFilters.include || []),
-        ...(authorFilter.include || []),
-      ].filter(Boolean),
-      subQuery: false,
-    }
+    return [
+      ...this.filtersByContent({ query, minLength, maxLength }),
+      this.filterByAuthor(author),
+      this.fitlerByTags(tags),
+    ].filter(Boolean)
   }
 
-  private filterByContent(queries?: {
+  private filtersByContent(queries?: {
     query?: string
     minLength?: number
     maxLength?: number
-  }): FindOptions<Quote> {
+  }): SQL[] {
     if (!queries) {
-      return {}
+      return []
     }
 
     const filters = []
@@ -285,122 +393,104 @@ export class QuoteRepository {
         .replace(/[+\-<>~*"@]/g, ' ')
         .trim()
         .replace(/\s+/g, ' ')
+        .split(' ')
+        .join(' & ')
 
-      // PostgreSQL full-text search
       filters.push(
-        Sequelize.where(
-          Sequelize.fn('to_tsvector', 'english', Sequelize.col('content')),
-          '@@',
-          Sequelize.fn(
-            'to_tsquery',
-            'english',
-            keywords.split(' ').join(' & '),
-          ),
-        ),
+        sql`to_tsvector('english', ${quotes.content}) @@ to_tsquery('english', ${keywords})`,
       )
     }
 
-    // Filter by content length if provided
     if (minLength) {
-      filters.push(
-        Sequelize.where(
-          Sequelize.fn('CHAR_LENGTH', Sequelize.col('content')),
-          '>=',
-          minLength,
-        ),
-      )
+      filters.push(sql`length(${quotes.content}) >= ${minLength}`)
     }
 
     if (maxLength) {
-      filters.push(
-        Sequelize.where(
-          Sequelize.fn('CHAR_LENGTH', Sequelize.col('content')),
-          '<=',
-          maxLength,
+      filters.push(sql`length(${quotes.content}) <= ${maxLength}`)
+    }
+
+    return filters
+  }
+
+  private filterByAuthor(author?: string): SQL | undefined {
+    if (!author) {
+      return undefined
+    }
+
+    return exists(
+      getClient()
+        .select({ n: sql`1` })
+        .from(authors)
+        .where(
+          and(
+            eq(authors.slug, getAuthorSlug(author)),
+            eq(authors.id, quotes.authorId),
+          ),
         ),
+    )
+  }
+
+  private fitlerByTags(tagQueries?: string): SQL | undefined {
+    if (!tagQueries) {
+      return undefined
+    }
+
+    if (tagQueries.includes('|')) {
+      const tagsList: string[] = tagQueries.split('|')
+
+      return exists(
+        getClient()
+          .select({ n: sql`1` })
+          .from(tags)
+          .innerJoin(quoteTags, eq(quoteTags.tagId, tags.id))
+          .where(
+            and(inArray(tags.name, tagsList), eq(quoteTags.quoteId, quotes.id)),
+          ),
       )
     }
 
-    return {
-      where: {
-        [Op.and]: filters,
-      },
-    }
-  }
+    const tagsList: string[] = tagQueries.split(',')
 
-  private filterByAuthor(
-    author?: string,
-  ): FindOptions<Quote> & { include?: Includeable[] } {
-    if (!author) {
-      return {}
-    }
-
-    return {
-      where: {
-        [Op.and]: [
-          {
-            '$author.slug$': Author.getSlug(author),
-          },
-        ],
-      },
-      include: [
-        {
-          model: Author,
-          required: true,
-        },
-      ],
-    }
-  }
-
-  private filterByTags(
-    tags?: string,
-  ): FindOptions<Quote> & { include?: Includeable[] } {
-    if (!tags) {
-      return {}
-    }
-
-    if (tags.includes('|')) {
-      const tagsList: string[] = tags.split('|')
-
-      return {
-        include: [
-          {
-            model: Tag,
-            as: Tag.tableName,
-            where: {
-              name: {
-                [Op.in]: tagsList,
-              },
-            },
-            required: true,
-          },
-        ],
-      }
-    }
-
-    const tagsList: string[] = tags.split(',')
-
-    // Ensuing that each quote must have all tags
-    const tagConditions = tagsList.map((tag) =>
-      Sequelize.literal(`EXISTS (
-        SELECT 1 FROM tags
-        INNER JOIN quote_tags ON "tags"."id" = "quote_tags"."tagId"
-        WHERE "quote_tags"."quoteId" = "Quote"."id"
-        AND "tags"."name" = ${this.sequelize.escape(tag)}
-      )`),
+    return and(
+      ...tagsList.map((tag) =>
+        exists(
+          getClient()
+            .select({ n: sql`1` })
+            .from(tags)
+            .innerJoin(quoteTags, eq(quoteTags.tagId, tags.id))
+            .where(and(eq(tags.name, tag), eq(quoteTags.quoteId, quotes.id))),
+        ),
+      ),
     )
+  }
+
+  private transform(
+    quote: Quote & { author?: Author; quoteTags?: { tag: Tag }[] },
+  ): QuoteWithRelationships {
+    const { quoteTags, ...rest } = quote
 
     return {
-      include: [
-        {
-          model: Tag,
-          as: Tag.tableName,
-          required: true,
-          where: {
-            [Op.and]: tagConditions,
-          },
-        },
-      ],
+      ...rest,
+      tags: quoteTags?.map((t) => t.tag) || [],
     }
+  }
+
+  private transformQuotes(
+    data: QuoteFindManyResult[],
+  ): QuoteWithRelationships[] {
+    const result: Map<number, QuoteWithRelationships> = new Map<
+      number,
+      QuoteWithRelationships
+    >()
+
+    data.forEach((i) => {
+      const quote: QuoteWithRelationships =
+        result.get(i.quotes.id) || this.transform(i.quotes)
+      quote.author = i.authors
+      quote.tags = quote.tags?.concat(i.tags) || [i.tags]
+      result.set(i.quotes.id, quote)
+    })
+
+    return Array.from(result.values())
   }
 }
