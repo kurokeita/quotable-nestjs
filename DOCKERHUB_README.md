@@ -36,7 +36,7 @@ Quotable is a free, open-source quotations API. It was built to support teachers
     -e DB_PASSWORD="{DB_PASSWORD}" \
     -e DB_USER="{DB_USER}" \
     -e DB_NAME="{DB_NAME}" \
-    -p {APP_PORT}:{APP_PORT} \
+    -p {APP_PORT}:3000 \
     {tag_name}
 ```
 

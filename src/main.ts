@@ -46,7 +46,7 @@ async function bootstrap() {
       'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui.min.css',
     ],
     customfavIcon:
-      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.18.2/favicon-32x32.png',
+      'https://raw.githubusercontent.com/kurokeita/quotable-nestjs/refs/heads/main/public/favicon.png',
   })
 
   await app.listen(configService.getOrThrow<number>('app.port'), '0.0.0.0')
