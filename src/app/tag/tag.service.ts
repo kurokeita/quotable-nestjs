@@ -1,23 +1,36 @@
 import { Injectable } from '@nestjs/common'
+import { plainToInstance } from 'class-transformer'
 import { Transaction } from '../../db/index'
 import { Quote } from '../../db/schema/quote.schema'
-import { QuoteTag, TagWithQuotesCount } from '../../db/schema/tag.schema'
-import { IndexTagDto } from './tag.dto'
+import { QuoteTag } from '../../db/schema/tag.schema'
+import { IndexTagDto, TagDto } from './tag.dto'
 import { TagRepository } from './tag.repository'
 
 @Injectable()
 export class TagService {
   constructor(private tagRepository: TagRepository) {}
 
-  async index(request: IndexTagDto): Promise<TagWithQuotesCount[]> {
-    return await this.tagRepository.index(request)
+  async index(request: IndexTagDto): Promise<TagDto[]> {
+    const tags = await this.tagRepository.index(request)
+
+    return tags.map((t) => plainToInstance(TagDto, t))
   }
 
   async sync(
     quote: Quote,
-    tags: string[],
+    tags?: string[],
     options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
+    if (tags === undefined) {
+      return quote
+    }
+
+    if (tags.length === 0) {
+      await this.tagRepository.deleteAllQuoteTags(quote.id, options)
+
+      return quote
+    }
+
     const orginalQuoteTags = await this.tagRepository.getQuoteTags(
       quote.id,
       options,
@@ -50,7 +63,12 @@ export class TagService {
       (t) => !quoteTagsMap.has(`${t.quoteId}.${t.tagId}`),
     )
 
-    await this.tagRepository.bulkDeleteQuoteTags(quoteTagsToBeDeleted, options)
+    if (quoteTagsToBeDeleted.length) {
+      await this.tagRepository.bulkDeleteQuoteTags(
+        quoteTagsToBeDeleted,
+        options,
+      )
+    }
 
     return quote
   }

@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -57,14 +57,14 @@ export class QuoteController {
     required: true,
   })
   async update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateQuoteDto,
   ) {
     return await this.quoteService.update(id, request)
   }
 
   @Get(':id')
-  async getById(@Param('id', ParseIntPipe) id: number) {
+  async getById(@Param('id', ParseUUIDPipe) id: string) {
     return await this.quoteService.getById(id)
   }
 
@@ -74,7 +74,7 @@ export class QuoteController {
     description: 'the resource manipulation api key',
     required: true,
   })
-  async delete(@Param('id', ParseIntPipe) id: number) {
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
     await this.quoteService.delete(id)
 
     return {

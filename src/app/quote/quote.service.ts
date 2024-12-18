@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { plainToInstance } from 'class-transformer'
 import { getClient } from '../../db'
 import { Transaction } from '../../db/index'
 import { getAuthorSlug } from '../../db/schema/author.schema'
@@ -11,6 +12,7 @@ import {
   CreateQuoteDto,
   GetRandomQuotesDto,
   IndexQuotesDto,
+  QuoteDto,
   UpdateQuoteDto,
 } from './quote.dto'
 import { QuoteRepository } from './quote.repository'
@@ -33,26 +35,33 @@ export class QuoteService {
     if (request.limit) {
       return {
         isMultiple: true,
-        data: await this.quoteRepository.random({
-          ...request,
-          limit: request.limit as number,
-        }),
+        data: this.convertToQuoteDtos(
+          await this.quoteRepository.random({
+            ...request,
+            limit: request.limit as number,
+          }),
+        ),
       }
     }
 
     return {
       isMultiple: false,
-      data: await this.quoteRepository.random({ ...request, limit: undefined }),
+      data: this.convertToQuoteDtos([
+        await this.quoteRepository.random({ ...request, limit: undefined }),
+      ])[0],
     }
   }
 
-  async index(
-    request: IndexQuotesDto,
-  ): Promise<PaginatedResponse<QuoteWithRelationships>> {
-    return await this.quoteRepository.index(request)
+  async index(request: IndexQuotesDto): Promise<PaginatedResponse<QuoteDto>> {
+    const data = await this.quoteRepository.index(request)
+
+    return {
+      data: this.convertToQuoteDtos(data.data),
+      metadata: data.metadata,
+    }
   }
 
-  async create(request: CreateQuoteDto): Promise<Quote> {
+  async create(request: CreateQuoteDto): Promise<QuoteDto> {
     return await getClient().transaction(async (t) => {
       const quote = await this.quoteRepository.create(request, {
         transaction: t,
@@ -62,16 +71,18 @@ export class QuoteService {
         transaction: t,
       })
 
-      return await this.quoteRepository.getById(quote.id, {
-        transaction: t,
-        findOrFail: true,
-      })
+      return this.convertToQuoteDtos([
+        await this.quoteRepository.getById(quote.id, {
+          transaction: t,
+          findOrFail: true,
+        }),
+      ])[0]
     })
   }
 
-  async update(id: number, request: UpdateQuoteDto): Promise<Quote> {
+  async update(uuid: string, request: UpdateQuoteDto): Promise<QuoteDto> {
     return await getClient().transaction(async (t) => {
-      const quote = await this.quoteRepository.update(id, request, {
+      const quote = await this.quoteRepository.update(uuid, request, {
         transaction: t,
       })
 
@@ -79,24 +90,28 @@ export class QuoteService {
         transaction: t,
       })
 
-      return await this.quoteRepository.getById(quote.id, {
-        transaction: t,
-        findOrFail: true,
-      })
+      return this.convertToQuoteDtos([
+        await this.quoteRepository.getById(quote.id, {
+          transaction: t,
+          findOrFail: true,
+        }),
+      ])[0]
     })
   }
 
-  async getById(id: number): Promise<QuoteWithRelationships> {
-    return await this.quoteRepository.getById(id, { findOrFail: true })
+  async getById(uuid: string): Promise<QuoteDto> {
+    return this.convertToQuoteDtos([
+      await this.quoteRepository.getByUuid(uuid, { findOrFail: true }),
+    ])[0]
   }
 
-  async delete(id: number): Promise<Quote> {
+  async delete(uuid: string): Promise<QuoteDto> {
     return await getClient().transaction(async (t) => {
-      const quote = await this.quoteRepository.delete(id, {
+      const quote = await this.quoteRepository.delete(uuid, {
         transaction: t,
       })
 
-      return quote
+      return this.convertToQuoteDtos([quote])[0]
     })
   }
 
@@ -187,5 +202,9 @@ export class QuoteService {
       skipped: skippedData.length,
       skippedData: skippedData,
     }
+  }
+
+  private convertToQuoteDtos(quotes: Quote[]): QuoteDto[] {
+    return quotes.map((q) => plainToInstance(QuoteDto, q))
   }
 }

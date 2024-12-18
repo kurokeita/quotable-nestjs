@@ -129,6 +129,79 @@ export class QuoteRepository {
     return quote ? this.transform(quote) : null
   }
 
+  async getByUuid(
+    uuid: string,
+    options: {
+      findOrFail: true
+      withRelationships: true
+      transaction?: Transaction
+    },
+  ): Promise<QuoteWithRelationships>
+  async getByUuid(
+    uuid: string,
+    options: {
+      findOrFail: true
+      withRelationships?: false
+      transaction?: Transaction
+    },
+  ): Promise<Quote>
+  async getByUuid(
+    uuid: string,
+    options?: {
+      findOrFail?: false
+      withRelationships: true
+      transaction?: Transaction
+    },
+  ): Promise<QuoteWithRelationships | null>
+  async getByUuid(
+    uuid: string,
+    options?: {
+      findOrFail?: false
+      withRelationships?: false
+      transaction?: Transaction
+    },
+  ): Promise<Quote | null>
+  async getByUuid(
+    uuid: string,
+    options: {
+      findOrFail?: boolean
+      withRelationships?: boolean
+      transaction?: Transaction
+    } = {},
+  ): Promise<QuoteWithRelationships | Quote | null> {
+    const {
+      findOrFail = false,
+      withRelationships = true,
+      transaction = undefined,
+    } = options
+
+    const quote = await getClient(transaction).query.quotes.findFirst({
+      where: and(eq(quotes.uuid, uuid), isNull(quotes.deletedAt)),
+      with: withRelationships
+        ? {
+            author: true,
+            quoteTags: {
+              columns: {
+                tagId: false,
+                quoteId: false,
+              },
+              with: {
+                tag: true,
+              },
+            },
+          }
+        : undefined,
+    })
+
+    if (findOrFail && !quote) {
+      throw new UnprocessableEntityException(
+        `Quote with uuid ${uuid} not found`,
+      )
+    }
+
+    return quote ? this.transform(quote) : null
+  }
+
   async getByIds(
     ids: number[],
     options: {
@@ -323,11 +396,11 @@ export class QuoteRepository {
   }
 
   async update(
-    id: number,
+    uuid: string,
     input: UpdateQuoteDto,
     options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
-    const quote = await this.getById(id, {
+    const quote = await this.getByUuid(uuid, {
       findOrFail: true,
       withRelationships: false,
       transaction: options.transaction,
@@ -336,17 +409,17 @@ export class QuoteRepository {
     const result = await getClient(options.transaction)
       .update(quotes)
       .set({ content: input.content ?? quote.content })
-      .where(eq(quotes.id, id))
+      .where(eq(quotes.id, quote.id))
       .returning()
 
     return result[0]
   }
 
   async delete(
-    id: number,
+    uuid: string,
     options: { transaction?: Transaction } = {},
   ): Promise<Quote> {
-    await this.getById(id, {
+    const quote = await this.getByUuid(uuid, {
       findOrFail: true,
       withRelationships: false,
       transaction: options.transaction,
@@ -355,7 +428,7 @@ export class QuoteRepository {
     const result = await getClient()
       .update(quotes)
       .set({ deletedAt: sql`now()` })
-      .where(eq(quotes.id, id))
+      .where(eq(quotes.id, quote.id))
       .returning()
 
     return result[0]
