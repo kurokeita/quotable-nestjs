@@ -1,8 +1,15 @@
 import { Injectable } from '@nestjs/common'
+import { plainToInstance } from 'class-transformer'
+import PaginatedResponse from 'src/interfaces/paginated_response.interface'
 import { Transaction } from '../../db'
 import { Author } from '../../db/schema/author.schema'
 import { BulkCreateResult } from '../../interfaces/bulk_create_result.interface'
-import { CreateAuthorDto, IndexAuthorsDto, UpdateAuthorDto } from './author.dto'
+import {
+  AuthorDto,
+  CreateAuthorDto,
+  IndexAuthorsDto,
+  UpdateAuthorDto,
+} from './author.dto'
 import { AuthorRepository } from './author.repository'
 
 @Injectable()
@@ -12,29 +19,46 @@ export class AuthorService {
   constructor(protected readonly authorRepository: AuthorRepository) {}
 
   async create(input: CreateAuthorDto) {
-    return await this.authorRepository.create(input)
+    const author = await this.authorRepository.create(input)
+
+    return this.convertToAuthorDtos([author])[0]
   }
 
-  async update(id: number, input: UpdateAuthorDto) {
-    return await this.authorRepository.update(id, input)
+  async update(uuid: string, input: UpdateAuthorDto) {
+    const author = await this.authorRepository.update(uuid, input)
+
+    return this.convertToAuthorDtos([author])[0]
   }
 
-  async delete(id: number) {
-    return await this.authorRepository.delete(id)
+  async delete(uuid: string) {
+    const author = await this.authorRepository.delete(uuid)
+
+    return this.convertToAuthorDtos([author])[0]
   }
 
   async getBySlug(slug: string) {
-    return await this.authorRepository.getBySlug(slug, {
+    const author = await this.authorRepository.getBySlug(slug, {
       findOrFail: true,
     })
+
+    return this.convertToAuthorDtos([author])[0]
   }
 
-  async getById(id: number) {
-    return await this.authorRepository.getById(id, { findOrFail: true })
+  async getByUuid(uuid: string) {
+    const author = await this.authorRepository.getByUuid(uuid, {
+      findOrFail: true,
+    })
+
+    return this.convertToAuthorDtos([author])[0]
   }
 
-  async index(input: IndexAuthorsDto) {
-    return await this.authorRepository.index(input)
+  async index(input: IndexAuthorsDto): Promise<PaginatedResponse<AuthorDto>> {
+    const result = await this.authorRepository.index(input)
+
+    return {
+      data: this.convertToAuthorDtos(result.data),
+      metadata: result.metadata,
+    }
   }
 
   async bulkCreate(
@@ -89,5 +113,9 @@ export class AuthorService {
     options: { transaction?: Transaction } = {},
   ) {
     return await this.authorRepository.getBySlugs(slugs, options)
+  }
+
+  private convertToAuthorDtos(authors: Author[]): AuthorDto[] {
+    return authors.map((a) => plainToInstance(AuthorDto, a))
   }
 }

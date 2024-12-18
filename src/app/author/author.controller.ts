@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -19,8 +19,8 @@ export class AuthorController {
   constructor(private readonly authorService: AuthorService) {}
 
   @Get('/:id')
-  async getAuthorById(@Param('id', ParseIntPipe) id: number) {
-    return await this.authorService.getById(id)
+  async getAuthorByUuid(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.authorService.getByUuid(id)
   }
 
   @Get('/slug/:slug')
@@ -50,7 +50,7 @@ export class AuthorController {
     required: true,
   })
   async update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateAuthorDto,
   ) {
     return await this.authorService.update(id, request)
@@ -62,7 +62,7 @@ export class AuthorController {
     description: 'the resource manipulation api key',
     required: true,
   })
-  async delete(@Param('id', ParseIntPipe) id: number) {
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
     return await this.authorService.delete(id)
   }
 }

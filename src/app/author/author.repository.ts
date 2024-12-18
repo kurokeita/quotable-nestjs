@@ -58,6 +58,32 @@ export class AuthorRepository {
     return author
   }
 
+  async getByUuid(
+    uuid: string,
+    options: { findOrFail: true; transaction?: Transaction },
+  ): Promise<Author>
+  async getByUuid(
+    uuid: string,
+    options?: { findOrFail?: false; transaction?: Transaction },
+  ): Promise<Author | undefined>
+  async getByUuid(
+    uuid: string,
+    options: { findOrFail?: boolean; transaction?: Transaction } = {},
+  ): Promise<Author | undefined> {
+    const { findOrFail = false, transaction } = options
+    const author = await getClient(transaction).query.authors.findFirst({
+      where: and(eq(authors.uuid, uuid), isNull(authors.deletedAt)),
+    })
+
+    if (findOrFail && !author) {
+      throw new UnprocessableEntityException(
+        `Author with UUID ${uuid} not found`,
+      )
+    }
+
+    return author
+  }
+
   async getByIds(
     ids: number[],
     options: { transaction?: Transaction } = {},
@@ -156,12 +182,12 @@ export class AuthorRepository {
   }
 
   async update(
-    id: number,
+    id: string,
     input: UpdateAuthorDto,
     options: { transaction?: Transaction } = {},
   ): Promise<Author> {
     const { transaction } = options
-    const author = (await this.getById(id, {
+    const author = (await this.getByUuid(id, {
       findOrFail: true,
       transaction: transaction,
     })) as Author
@@ -173,17 +199,17 @@ export class AuthorRepository {
         bio: input.bio ?? author.bio,
         link: input.link ?? author.link,
       })
-      .where(eq(authors.id, id))
+      .where(eq(authors.id, author.id))
       .returning()
 
     return result[0]
   }
 
   async delete(
-    id: number,
+    id: string,
     options: { transaction?: Transaction } = {},
   ): Promise<Author> {
-    await this.getById(id, {
+    const author = await this.getByUuid(id, {
       findOrFail: true,
       transaction: options.transaction,
     })
@@ -191,7 +217,7 @@ export class AuthorRepository {
     const result = await getClient(options.transaction)
       .update(authors)
       .set({ deletedAt: sql`now()` })
-      .where(eq(authors.id, id))
+      .where(eq(authors.id, author.id))
       .returning()
 
     return result[0]

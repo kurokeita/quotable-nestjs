@@ -1,5 +1,5 @@
 import { ApiProperty, ApiSchema, OmitType } from '@nestjs/swagger'
-import { Transform, Type } from 'class-transformer'
+import { Exclude, Transform, Type } from 'class-transformer'
 import {
   IsDefined,
   IsEnum,
@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator'
 import * as _ from 'lodash'
+import { Author } from '../../db/schema/author.schema'
 import { OrderEnum } from '../../enums/order.enum'
 import { PagingLimitEnum } from '../../enums/paging_limit.enum'
 import { AuthorSortByEnum } from './author.repository'
@@ -78,3 +79,20 @@ export class CreateAuthorDto {
 export class UpdateAuthorDto extends OmitType(CreateAuthorDto, [
   'name',
 ] as const) {}
+
+export class AuthorDto implements Author {
+  @Exclude()
+  id: number
+  uuid: string
+  name: string
+  slug: string
+  description: string
+  bio: string | null
+  link: string | null
+  @Exclude()
+  createdAt: string
+  @Exclude()
+  updatedAt: string
+  @Exclude()
+  deletedAt: string | null
+}
