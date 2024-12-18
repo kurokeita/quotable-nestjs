@@ -15,6 +15,13 @@
       "when": 1734000967833,
       "tag": "0001_set_quotes_content_to_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1734533633587,
+      "tag": "0002_add_uuid_columns",
+      "breakpoints": true
     }
   ]
 }

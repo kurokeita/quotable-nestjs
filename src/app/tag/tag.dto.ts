@@ -1,7 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { Transform } from 'class-transformer'
+import { Exclude, Transform } from 'class-transformer'
 import { IsEnum, IsOptional } from 'class-validator'
 import * as _ from 'lodash'
+import { Tag } from '../../db/schema/tag.schema'
 import { OrderEnum } from '../../enums/order.enum'
 import { TagSortByEnum } from './tag.repository'
 
@@ -24,4 +25,18 @@ export class IndexTagDto {
   @IsOptional()
   @ApiPropertyOptional({ enum: Object.values(OrderEnum) })
   order?: OrderEnum
+}
+
+export class TagDto implements Tag {
+  @Exclude()
+  id: number
+  uuid: string
+  name: string
+  @Exclude()
+  createdAt: string
+  @Exclude()
+  updatedAt: string
+  @Exclude()
+  deletedAt: string | null
+  quotesCount: number
 }

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger'
-import { Transform, Type } from 'class-transformer'
+import { Exclude, Transform, Type } from 'class-transformer'
 import {
   IsArray,
   IsDefined,
@@ -12,8 +12,11 @@ import {
   ValidateIf,
 } from 'class-validator'
 import * as _ from 'lodash'
+import { Quote } from '../../db/schema/quote.schema'
 import { OrderEnum } from '../../enums/order.enum'
 import { PagingLimitEnum } from '../../enums/paging_limit.enum'
+import { AuthorDto } from '../author/author.dto'
+import { TagDto } from '../tag/tag.dto'
 import { QuoteSortByEnum } from './quote.repository'
 
 export class IndexQuotesDto {
@@ -110,10 +113,29 @@ export class CreateQuoteDto {
     return value
   })
   @ApiPropertyOptional()
-  tags: string[]
+  tags?: string[]
 }
 
 export class UpdateQuoteDto extends OmitType(CreateQuoteDto, [
   'authorId',
   'author',
 ] as const) {}
+
+export class QuoteDto implements Quote {
+  @Exclude()
+  id: number
+  uuid: string
+  @Exclude()
+  authorId: number
+  content: string
+  @Exclude()
+  createdAt: string
+  @Exclude()
+  updatedAt: string
+  @Exclude()
+  deletedAt: string | null
+  @Type(() => AuthorDto)
+  author: AuthorDto
+  @Type(() => TagDto)
+  tags: TagDto[]
+}

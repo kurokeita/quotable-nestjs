@@ -93,6 +93,15 @@ export class TagRepository {
       )
   }
 
+  async deleteAllQuoteTags(
+    quoteId: number,
+    options: { transaction?: Transaction },
+  ) {
+    await getClient(options.transaction)
+      .delete(quoteTags)
+      .where(eq(quoteTags.quoteId, quoteId))
+  }
+
   async getQuoteTags(
     quoteId: number,
     options: { transaction?: Transaction },

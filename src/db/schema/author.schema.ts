@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   unique,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
 import slugify from 'slugify'
@@ -13,6 +14,7 @@ export const authors = pgTable(
   'authors',
   {
     id: bigserial({ mode: 'number' }).primaryKey().notNull(),
+    uuid: uuid().notNull().defaultRandom().unique(),
     name: varchar({ length: 255 }).notNull(),
     slug: varchar({ length: 255 }).notNull(),
     description: text(),
