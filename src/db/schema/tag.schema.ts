@@ -7,6 +7,7 @@ import {
   primaryKey,
   timestamp,
   uniqueIndex,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
 import { quotes } from './quote.schema'
@@ -15,6 +16,7 @@ export const tags = pgTable(
   'tags',
   {
     id: bigserial({ mode: 'number' }).primaryKey().notNull(),
+    uuid: uuid().notNull().defaultRandom().unique(),
     name: varchar({ length: 255 }).notNull(),
     createdAt: timestamp({ withTimezone: true, mode: 'string' })
       .default(sql`CURRENT_TIMESTAMP(6)`)

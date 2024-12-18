@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core'
 import { Author, authors } from './author.schema'
 import { Tag } from './tag.schema'
@@ -15,6 +16,7 @@ export const quotes = pgTable(
   'quotes',
   {
     id: bigserial({ mode: 'number' }).primaryKey().notNull(),
+    uuid: uuid().notNull().defaultRandom().unique(),
     authorId: bigint({ mode: 'number' }).notNull(),
     content: text().notNull(),
     createdAt: timestamp({ withTimezone: true, mode: 'string' })
