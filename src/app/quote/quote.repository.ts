@@ -462,6 +462,7 @@ export class QuoteRepository {
         .trim()
         .replace(/\s+/g, ' ')
         .split(' ')
+        .map((word) => `${word}:*`)
         .join(' & ')
 
       filters.push(
