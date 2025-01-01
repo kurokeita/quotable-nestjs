@@ -1,0 +1,4 @@
+{
+  "adapter": "postgres",
+  "projectDescription": "This project is about collecting and managing quotes, with features to categorize and tag them, and possibly attributing them to their respective authors."
+}

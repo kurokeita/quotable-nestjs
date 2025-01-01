@@ -46,6 +46,8 @@
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
+    "@snaplet/copycat": "^5.1.1",
+    "@snaplet/seed": "0.98.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.2",
     "@types/multer": "^1.4.12",
