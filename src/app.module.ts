@@ -1,9 +1,4 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  RequestMethod,
-} from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { AuthorModule } from './app/author/author.module'
 import { HealthModule } from './app/health/health.module'
@@ -14,28 +9,28 @@ import { UploadModule } from './app/upload/upload.module'
 import appConfig from './config/app.config'
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [appConfig],
-    }),
-    HealthModule,
-    AuthorModule,
-    QuoteModule,
-    TagModule,
-    UploadModule,
-  ],
-  controllers: [],
-  providers: [],
+	imports: [
+		ConfigModule.forRoot({
+			isGlobal: true,
+			load: [appConfig],
+		}),
+		HealthModule,
+		AuthorModule,
+		QuoteModule,
+		TagModule,
+		UploadModule,
+	],
+	controllers: [],
+	providers: [],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(ResourceManipulationMiddleware)
-      .forRoutes(
-        { path: '*', method: RequestMethod.POST },
-        { path: '*', method: RequestMethod.PATCH },
-        { path: '*', method: RequestMethod.DELETE },
-      )
-  }
+	configure(consumer: MiddlewareConsumer) {
+		consumer
+			.apply(ResourceManipulationMiddleware)
+			.forRoutes(
+				{ path: '*', method: RequestMethod.POST },
+				{ path: '*', method: RequestMethod.PATCH },
+				{ path: '*', method: RequestMethod.DELETE },
+			)
+	}
 }

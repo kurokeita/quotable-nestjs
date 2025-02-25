@@ -4,7 +4,7 @@
 
 ```bash
 # install dependencies
-$ yarn install
+$ pnpm install
 $ cp .env.example .env
 ```
 
@@ -14,28 +14,28 @@ Set the appropriate environment variables in the `.env` file.
 
 ```bash
 # development
-$ yarn start:dev
+$ pnpm start:dev
 
 # debug development with HMR
-$ yarn start:dev:debug
+$ pnpm start:dev:debug
 
 # ddebug evelopment without HMR
-$ yarn start:debug
+$ pnpm start:debug
 
 # production mode
-$ yarn start:prod
+$ pnpm start:prod
 
 # migrate database
-$ yarn migrate:up
+$ pnpm migrate:up
 
 # migration generate
-$ yarn migrate:generate
+$ pnpm migrate:generate
 
 # migration undo
-$ yarn migrate:undo
+$ pnpm migrate:undo
 
 # migration fresh
-$ yarn migrate:fresh
+$ pnpm migrate:fresh
 ```
 
 ## Resources

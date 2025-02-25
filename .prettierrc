@@ -2,5 +2,11 @@
   "singleQuote": true,
   "trailingComma": "all",
   "semi": false,
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "printWidth": 120,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "tabWidth": 2,
+  "useTabs": true
 }

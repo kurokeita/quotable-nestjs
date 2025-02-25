@@ -22,6 +22,13 @@
       "when": 1734533633587,
       "tag": "0002_add_uuid_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1740455920398,
+      "tag": "0003_drop_sequential_id_usage",
+      "breakpoints": true
     }
   ]
 }
