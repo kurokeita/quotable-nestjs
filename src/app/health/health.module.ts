@@ -4,8 +4,8 @@ import { DbHealthIndicator } from '../../db/db.health'
 import { HealthController } from './health.controller'
 
 @Module({
-  imports: [TerminusModule],
-  controllers: [HealthController],
-  providers: [DbHealthIndicator],
+	imports: [TerminusModule],
+	controllers: [HealthController],
+	providers: [DbHealthIndicator],
 })
 export class HealthModule {}

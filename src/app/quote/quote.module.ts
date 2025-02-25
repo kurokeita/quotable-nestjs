@@ -6,9 +6,9 @@ import { QuoteRepository } from './quote.repository'
 import { QuoteService } from './quote.service'
 
 @Module({
-  imports: [AuthorModule, TagModule],
-  controllers: [QuoteController],
-  providers: [QuoteRepository, QuoteService],
-  exports: [AuthorModule, TagModule, QuoteRepository, QuoteService],
+	imports: [AuthorModule, TagModule],
+	controllers: [QuoteController],
+	providers: [QuoteRepository, QuoteService],
+	exports: [AuthorModule, TagModule, QuoteRepository, QuoteService],
 })
 export class QuoteModule {}

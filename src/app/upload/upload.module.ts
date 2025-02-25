@@ -7,9 +7,9 @@ import { UploadController } from './upload.controller'
 import { UploadService } from './upload.service'
 
 @Module({
-  imports: [QuoteModule],
-  controllers: [UploadController],
-  providers: [UploadService, AuthorService, QuoteService, TagService],
-  exports: [],
+	imports: [QuoteModule],
+	controllers: [UploadController],
+	providers: [UploadService, AuthorService, QuoteService, TagService],
+	exports: [],
 })
 export class UploadModule {}

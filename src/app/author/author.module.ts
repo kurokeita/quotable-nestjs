@@ -4,9 +4,9 @@ import { AuthorRepository } from './author.repository'
 import { AuthorService } from './author.service'
 
 @Module({
-  imports: [],
-  controllers: [AuthorController],
-  providers: [AuthorRepository, AuthorService],
-  exports: [AuthorRepository, AuthorService],
+	imports: [],
+	controllers: [AuthorController],
+	providers: [AuthorRepository, AuthorService],
+	exports: [AuthorRepository, AuthorService],
 })
 export class AuthorModule {}
