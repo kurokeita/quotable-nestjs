@@ -262,7 +262,8 @@ export class QuoteRepository {
 					.select({ id: quotes.id })
 					.from(quotes)
 					.where(and(isNull(quotes.deletedAt), ...filter))
-					.limit(limit),
+					.limit(limit)
+					.offset(limit * page),
 			)
 
 		const [countResult, selectResult] = await Promise.all([
@@ -284,7 +285,6 @@ export class QuoteRepository {
 				.innerJoin(tags, eq(tags.id, quoteTags.tagId))
 				.innerJoin(sq, eq(sq.id, quotes.id))
 				.where(eq(quotes.id, sq.id))
-				.offset(limit * page)
 				.orderBy(sql`"${sql.raw(getTableName(quotes))}".${sql.identifier(sortBy)} ${sql.raw(order)}`),
 		])
 
