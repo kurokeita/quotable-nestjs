@@ -35,7 +35,9 @@ async function bootstrap() {
 		.setVersion('1.0')
 		.setExternalDoc('GitHub Repository', 'https://github.com/kurokeita/quotable-nestjs')
 		.build()
+
 	const documentFactory = () => SwaggerModule.createDocument(app, config)
+
 	SwaggerModule.setup('/', app, documentFactory, {
 		customJs: [
 			'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui-bundle.min.js',
@@ -43,6 +45,8 @@ async function bootstrap() {
 		],
 		customCssUrl: ['https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2/swagger-ui.min.css'],
 		customfavIcon: 'https://raw.githubusercontent.com/kurokeita/quotable-nestjs/refs/heads/main/public/favicon.png',
+		jsonDocumentUrl: '/openapi.json',
+		yamlDocumentUrl: '/openapi.yaml',
 	})
 
 	await app.listen(configService.getOrThrow<number>('app.port'), '0.0.0.0')
